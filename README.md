@@ -106,10 +106,10 @@ All rights reserved © 2025 – *Team Bristol-Pink AI Forecasting*.
 
 ## 🚀 Authors
 **Team Members:**
-- Royden Valerian Dias
+- Ishaq Modassir Mushtaq
 - Rayyan Tahir
 - Chouaib Hakim
-- [Name 4]
+- Royden Valerian Dias
 - [Name 5]
 
 ---
