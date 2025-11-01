@@ -9,6 +9,7 @@ def read_file(file_path):
 def data_clean(data):
     data.dropna(inplace=True)
     data.drop_duplicates(inplace=True)
+    data['Date'] = pd.to_datetime(data['Date'], format= '%d/%m/%Y')
     return data
 def plot_data(data):
     headers = data.columns.tolist()
