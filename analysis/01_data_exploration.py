@@ -25,3 +25,6 @@ def plot_data(data):
 drinks_data = pd.read_csv('data/raw/Pink CoffeeSales March - Oct 2025.csv')
 drinks_clean_data = data_clean(drinks_data)
 plot_data(drinks_clean_data)
+food_data = pd.read_csv('data/raw/Pink CroisantSales March - Oct 2025.csv')
+food_clean_data = data_clean(food_data)
+plot_data(food_clean_data)
