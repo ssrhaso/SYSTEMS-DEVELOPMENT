@@ -17,11 +17,6 @@ def data_clean(data):
     
     data['Date'] = pd.to_datetime(data['Date'], format= '%d/%m/%Y')# Convert the 'Date' column to datetime objects using the specified format.
     return data
-<<<<<<< HEAD    
-
-=======
-
->>>>>>> bf580eb310106130649c4db6f391078bf42f8950
 def plot_data(data):
     # Function to create and display a line plot of the sales data.
     headers = data.columns.tolist() # Get a list of all column names (headers).
@@ -46,13 +41,6 @@ plot_data(drinks_clean_data)
 # --- Main Execution Block (for Pink Croissant Sales) ---
 # Read the food sales data into a DataFrame.
 food_data = pd.read_csv('data/raw/pink_croissant_sales.csv')
-<<<<<<< HEAD
 food_clean_data = data_clean(food_data) 
 plot_data(food_clean_data)
 
-=======
-# Clean the food sales data (drops NA/duplicates, converts 'Date').
-food_clean_data = data_clean(food_data)
-# Plot the cleaned food sales data.
-plot_data(food_clean_data)
->>>>>>> bf580eb310106130649c4db6f391078bf42f8950
