@@ -127,5 +127,5 @@ All rights reserved © 2025 – *Team Bristol-Pink AI Forecasting*.
 - Rayyan Tahir
 - Royden Valerian Dias
 - Hasaan Ahmad
-
+- Chouaib Hakim 
 ---
