@@ -17,10 +17,10 @@ def data_clean(data):
     
     data['Date'] = pd.to_datetime(data['Date'], format= '%d/%m/%Y')# Convert the 'Date' column to datetime objects using the specified format.
     return data
-<<<<<<< HEAD
+<<<<<<< HEAD    
 
 =======
-    
+
 >>>>>>> bf580eb310106130649c4db6f391078bf42f8950
 def plot_data(data):
     # Function to create and display a line plot of the sales data.
