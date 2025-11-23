@@ -11,6 +11,7 @@ def data_clean(data):
     data.drop_duplicates(inplace=True)
     data['Date'] = pd.to_datetime(data['Date'], format= '%d/%m/%Y')
     return data
+
 def plot_data(data):
     headers = data.columns.tolist()
     data.plot(x=headers[0], kind='line')
@@ -26,5 +27,6 @@ drinks_data = pd.read_csv('data/raw/pink_coffee_sales.csv')
 drinks_clean_data = data_clean(drinks_data)
 plot_data(drinks_clean_data)
 food_data = pd.read_csv('data/raw/pink_croissant_sales.csv')
-food_clean_data = data_clean(food_data)
+food_clean_data = data_clean(food_data) 
 plot_data(food_clean_data)
+
