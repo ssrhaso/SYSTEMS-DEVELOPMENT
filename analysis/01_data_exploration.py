@@ -34,14 +34,14 @@ def plot_data(data):
 # --- Main Execution Block (for Pink Coffee Sales) ---
 
 # Read the coffee sales data into a DataFrame.
-drinks_data = pd.read_csv('data/raw/pink_coffee_sales.csv')
+drinks_data = pd.read_csv('data/raw/Pink_CroissantSales_March-Oct_2025.csv')
 # Clean the coffee sales data (drops NA/duplicates, converts 'Date').
 drinks_clean_data = data_clean(drinks_data)
 # Plot the cleaned coffee sales data.
 plot_data(drinks_clean_data)
 # --- Main Execution Block (for Pink Croissant Sales) ---
 # Read the food sales data into a DataFrame.
-food_data = pd.read_csv('data/raw/pink_croissant_sales.csv')
+food_data = pd.read_csv('data/raw/Pink_CroissantSales_March-Oct_2025.csv')
 # Clean the food sales data (drops NA/duplicates, converts 'Date').
 food_clean_data = data_clean(food_data)
 # Plot the cleaned food sales data.
