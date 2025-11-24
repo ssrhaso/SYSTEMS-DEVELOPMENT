@@ -17,7 +17,6 @@ def data_clean(data):
     
     data['Date'] = pd.to_datetime(data['Date'], format= '%d/%m/%Y')# Convert the 'Date' column to datetime objects using the specified format.
     return data
-    
 def plot_data(data):
     # Function to create and display a line plot of the sales data.
     headers = data.columns.tolist() # Get a list of all column names (headers).
