@@ -10,7 +10,7 @@ This project focuses on building a **standalone electronic dashboard** that anal
 
 ---
 
-## 🎯 Project Aim
+## Project Aim
 
 Develop an intelligent dashboard that:
 
