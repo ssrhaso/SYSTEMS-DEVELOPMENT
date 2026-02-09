@@ -1,131 +1,90 @@
-## Systems Development Group Project
+## Bakery Sales Forecasting — Bristol-Pink
 
-# 🍞 SDGP – Bakery Sales Prediction System
+### Overview
 
-## 📘 Project Overview
+This repository contains the code and resources for a Bakery Sales Forecasting system developed as part of the Systems Development Group Project. The solution analyzes historical sales data, builds predictive models, and provides a dashboard for visualizing forecasts and insights to support inventory and purchasing decisions.
 
-**Bristol-Pink** is a new bakery chain operating five cafés located near schools and office areas. The company caters mainly to families and local office workers.
-To reduce **food waste** and improve **inventory management**, Bristol-Pink aims to use **AI and Machine Learning** to predict daily sales volumes at each café.
-This project focuses on building a **standalone electronic dashboard** that analyzes past sales data, forecasts future demand, and visualizes results interactively.
+### Objectives
 
----
+- Provide accurate short-term sales forecasts for key products.
+- Reduce food waste and optimize inventory purchasing.
+- Offer interactive visualizations to support operational decisions.
 
-## Project Aim
+### Features
 
-Develop an intelligent dashboard that:
+- Data ingestion and preprocessing for CSV sales data.
+- Exploratory data analysis and visual summaries.
+- Multiple predictive models with evaluation metrics (MAE, RMSE, R²).
+- Interactive dashboard for viewing historical data and forecasts.
 
-- Analyzes historical sales data from CSV files.
-- Identifies sales trends and top-performing products.
-- Predicts future sales for high-impact items (foods and coffees).
-- Provides interactive, visual insights for decision-making.
+### Repository Structure
 
-Ultimately, the system will help Bristol-PPink minimize waste, optimize purchasing, and improve operational efficiency.
+- `data/` — raw and processed data files (CSV).
+- `src/` — data loading, preprocessing, feature engineering, and model training code.
+- `models/` — model definitions and evaluation utilities.
+- `Dashboard/` — dashboard application (`app.py`) and visualization code.
+- `analysis/` — exploratory analysis notebooks/scripts.
 
----
+### Setup
 
-## 🧠 Core System Requirements
+Recommended Python: 3.8 or newer.
 
-### 1. Data Input & Processing
+1. Create and activate a virtual environment:
 
-- Import and process **CSV data files** containing historical sales information.
-- Perform data cleaning, formatting, and preparation for machine learning analysis.
+```powershell
+python -m venv .venv
+.venv\Scripts\Activate.ps1   # PowerShell
+# or .venv\Scripts\activate  # cmd.exe
+```
 
-### 2. Exploratory Data Analysis
+2. Install dependencies (if `requirements.txt` is present):
 
-- Identify the **top three selling food items** and **top three selling coffees**.
-- Visualize **sales fluctuations** over the past four weeks using clear, interactive graphs.
+```powershell
+pip install -r requirements.txt
+```
 
-### 3. Predictive Modelling
+### Running the Dashboard
 
-- Apply suitable **AI/ML algorithms** (e.g., Linear Regression, Random Forest, ARIMA, or LSTM).
-- Train models using historical data to **forecast sales for the next four weeks**.
-- Display predictions per product in individual charts.
+To run the dashboard application, open `Dashboard/app.py` and run it with the appropriate runner. If the dashboard uses Streamlit, use:
 
-### 4. Interactive Dashboard Features
+```powershell
+streamlit run Dashboard/app.py
+```
 
-- **Zoom and focus** on selected date ranges for detailed views.
-- **Adjust the training window** (4–8 weeks) to compare model performance.
-- Display results in both **tabular** and **graphical** formats.
+Otherwise run directly with Python:
 
-### 5. Model Evaluation & Comparison
+```powershell
+python Dashboard\app.py
+```
 
-- Include an optional view showing **accuracy metrics** (e.g., MAE, RMSE, R²).
-- Compare algorithm performance and visualize results.
+### Data
 
----
+Place raw CSV files in `data/raw/`. Example files included in this repository:
 
-## 🧩 Expected Deliverables
+- `data/raw/Pink_CoffeeSales_March - Oct 2025.csv`
+- `data/raw/Pink_CroissantSales_March-Oct_2025.csv`
 
-1. A **functional standalone dashboard** (desktop or web-based).
-2. Interactive **data analysis and visualization** tools.
-3. Accurate **sales forecasts** for the next four weeks.
-4. A **model performance evaluation** section.
-5. Support for **CSV data import**, user interaction, and comparison of predictions.
+### Model Training & Evaluation
 
----
+Model training scripts are in `src/models/` and `models/`. Evaluation metrics (MAE, RMSE, R²) are produced by the evaluation utilities in `src/models` and `models/evaluator.py`.
 
-## ⚙️ Technical Stack (Suggested)
-
-| Component                      | Technology Options                                        |
-| ------------------------------ | --------------------------------------------------------- |
-| **Frontend/UI**          | Python (Streamlit, Dash) or Web (React + Flask/FastAPI)   |
-| **Data Processing & ML** | Python (Pandas, NumPy, Scikit-learn, TensorFlow, Prophet) |
-| **Visualization**        | Matplotlib, Plotly, Seaborn                               |
-| **Model Evaluation**     | MAE, MSE, RMSE, R² Score                                 |
-
----
-
-## 👥 Team Roles (Suggested)
-
-| Role                         | Responsibilities                                                      |
-| ---------------------------- | --------------------------------------------------------------------- |
-| **Data Engineer**      | Handle data ingestion, cleaning, and preprocessing.                   |
-| **ML Specialist**      | Build, train, and tune predictive models.                             |
-| **Data Analyst**       | Explore trends, generate visual insights, and assist with EDA.        |
-| **Frontend Developer** | Develop dashboard UI and interactivity.                               |
-| **Systems Integrator** | Combine components, perform testing, and evaluate system performance. |
-
----
-
-## 🗓️ Development Roadmap (Example)
-
-| Phase                                            | Duration   | Key Tasks                                                        |
-| ------------------------------------------------ | ---------- | ---------------------------------------------------------------- |
-| **Phase 1: Research & Data Understanding** | Week 1     | Collect sample data, understand structure, identify key metrics. |
-| **Phase 2: Data Processing & Cleaning**    | Week 2     | Prepare and clean CSVs, handle missing data and outliers.        |
-| **Phase 3: Model Development**             | Weeks 3–4 | Experiment with ML algorithms, evaluate accuracy.                |
-| **Phase 4: Dashboard Design**              | Week 5     | Build dashboard UI, integrate visualization and interactivity.   |
-| **Phase 5: Integration & Testing**         | Week 6     | Combine modules, test predictions, refine user experience.       |
-| **Phase 6: Final Evaluation & Report**     | Week 7     | Validate performance, finalize documentation, and deploy.        |
-
----
-
-## 📊 Expected Outcome
-
-The final system will:
-
-- Accurately **forecast café sales** for key items.
-- Present **visual insights** for better decision-making.
-- Allow **dynamic user interaction** (zooming, adjusting training periods).
-- Support **model comparison** and algorithm evaluation.
-- Contribute to Bristol-Pink’s **goal of reducing food waste** and **increasing efficiency**.
-
----
-
-## 🧾 License
-
-This project is developed as part of the **SDGP (Software Development Group Project)** coursework.
-All rights reserved © 2025 – *Team Bristol-Pink AI Forecasting*.
-
----
-
-## 🚀 Authors
-
-**Team Members:**
+### Project Contributors
 
 - Ishaq Modassir Mushtaq
 - Rayyan Tahir
 - Royden Valerian Dias
 - Hasaan Ahmad
-- Chouaib Hakim 
+- Chouaib Hakim
+
+### License
+
+This project was developed for the SDGP coursework. Please contact the project team for reuse or distribution permissions.
+
 ---
+
+If you would like, I can also:
+
+- add a `requirements.txt` generated from the environment,
+- run a quick lint/format pass, or
+- preview the dashboard locally and confirm startup instructions.
+
