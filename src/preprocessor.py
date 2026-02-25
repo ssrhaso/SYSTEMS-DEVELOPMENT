@@ -76,7 +76,6 @@ if __name__ == "__main__":
     for i, file in enumerate(file_paths):
         data, type_item = read_file(file)
         clean_data = data_clean(data)
-        # Generate output filename based on input file
         filename = os.path.basename(file).replace('.csv', '.png')
         output_path = f'./data/processed/{filename}'
         plot_data(clean_data, output_path)
