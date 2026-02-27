@@ -81,10 +81,3 @@ Model training scripts are in `src/models/` and `models/`. Evaluation metrics (M
 This project was developed for the SDGP coursework. Please contact the project team for reuse or distribution permissions.
 
 ---
-
-If you would like, I can also:
-
-- add a `requirements.txt` generated from the environment,
-- run a quick lint/format pass, or
-- preview the dashboard locally and confirm startup instructions.
-
