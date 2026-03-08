@@ -79,8 +79,8 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 | ---------------------- | ------------------------------------------------------------------------------------- |
 | Hasaan Ahmad           | Forecasting algorithms, Pseudocode, System architecture, Streamlit App Development    |
 | Chouaib Hakim          | Literature review (food waste reduction), Use case Diagram, Streamlit App Development |
-| Ishaq Modassir Mushtaq | Data Preprocessing, Class diagrams                                                    |
-| Rayyan Tahir           | Software engineering practices, Sequence Diagrams,                                    |
+| Ishaq Modassir Mushtaq | Data Preprocessing, Class diagrams, Unit Test Cases, ML for Demand Prediction         |
+| Rayyan Tahir           | Software engineering practices, Sequence Diagrams                                     |
 | Royden Valerian Dias   | UI/UX wireframes, Dashboard Design, Streamlit App Development                         |
 
 ## License
