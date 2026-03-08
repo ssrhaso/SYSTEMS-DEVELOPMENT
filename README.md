@@ -1,83 +1,88 @@
-## Bakery Sales Forecasting — Bristol-Pink
 
-### Overview
+# Bristol Pink Cafe - Sales Forecasting Dashboard
 
-This repository contains the code and resources for a Bakery Sales Forecasting system developed as part of the Systems Development Group Project. The solution analyzes historical sales data, builds predictive models, and provides a dashboard for visualizing forecasts and insights to support inventory and purchasing decisions.
+An intelligent forecasting dashboard that predicts bakery product sales across five Bristol Pink Cafe locations using time series and machine learning algorithms, enabling data-driven inventory management to minimise food waste.
 
-### Objectives
-
-- Provide accurate short-term sales forecasts for key products.
-- Reduce food waste and optimize inventory purchasing.
-- Offer interactive visualizations to support operational decisions.
-
-### Features
-
-- Data ingestion and preprocessing for CSV sales data.
-- Exploratory data analysis and visual summaries.
-- Multiple predictive models with evaluation metrics (MAE, RMSE, R²).
-- Interactive dashboard for viewing historical data and forecasts.
-
-### Repository Structure
-
-- `data/` — raw and processed data files (CSV).
-- `src/` — data loading, preprocessing, feature engineering, and model training code.
-- `models/` — model definitions and evaluation utilities.
-- `Dashboard/` — dashboard application (`app.py`) and visualization code.
-- `analysis/` — exploratory analysis notebooks/scripts.
-
-### Setup
-
-Recommended Python: 3.8 or newer.
-
-1. Create and activate a virtual environment:
-
-```powershell
-python -m venv .venv
-.venv\Scripts\Activate.ps1   # PowerShell
-# or .venv\Scripts\activate  # cmd.exe
-```
-
-2. Install dependencies (if `requirements.txt` is present):
-
-```powershell
-pip install -r requirements.txt
-```
-
-### Running the Dashboard
-
-To run the dashboard application, open `Dashboard/app.py` and run it with the appropriate runner. If the dashboard uses Streamlit, use:
-
-```powershell
-streamlit run Dashboard/app.py
-```
-
-Otherwise run directly with Python:
-
-```powershell
-python Dashboard\app.py
-```
-
-### Data
-
-Place raw CSV files in `data/raw/`. Example files included in this repository:
-
-- `data/raw/Pink_CoffeeSales_March - Oct 2025.csv`
-- `data/raw/Pink_CroissantSales_March-Oct_2025.csv`
-
-### Model Training & Evaluation
-
-Model training scripts are in `src/models/` and `models/`. Evaluation metrics (MAE, RMSE, R²) are produced by the evaluation utilities in `src/models` and `models/evaluator.py`.
-
-### Project Contributors
-
-- Ishaq Modassir Mushtaq
-- Rayyan Tahir
-- Royden Valerian Dias
-- Hasaan Ahmad
-- Chouaib Hakim
-
-### License
-
-This project was developed for the SDGP coursework. Please contact the project team for reuse or distribution permissions.
+Developed as part of **UFCF7S-30-2 Systems Development Group Project** at UWE Bristol.
 
 ---
+
+## Problem
+
+Bakeries waste between 5–15% of daily production due to inaccurate demand estimation. Bristol Pink Cafe needed a system to forecast demand for perishable products, aligning baking volumes with actual sales to reduce waste and improve profitability.
+
+## Solution
+
+A Streamlit-based dashboard that ingests historical sales CSV data, visualises trends across products and locations, and generates 28-day sales predictions using configurable forecasting models — all accessible to non-technical bakery managers.
+
+## Key Features
+
+| Feature                           | Description                                                                                           |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **CSV Import & Validation** | Robust upload with format detection, error handling for malformed data, and clear user feedback (FR1) |
+| **Sales Visualisation**     | Interactive line charts and bar charts with adjustable time windows — 1, 4, or 8 weeks (FR2, FR3)    |
+| **Forecasting Engine**      | Prophet, ARIMA, XGBoost, and Ensemble models producing 28-day predictions with MAPE ≤ 35% (FR4)      |
+| **Training Window Control** | Slider to adjust training period between 4–8 weeks, with live metric recalculation (FR5)             |
+| **Data Export**             | Download forecast results as CSV and chart images as PNG (FR6)                                        |
+
+## Tech Stack
+
+* **Frontend:** Streamlit, Plotly
+* **Forecasting:** Facebook Prophet, pmdarima (ARIMA), XGBoost
+* **Evaluation:** 3-split walk-forward validation with MAPE, MAE, RMSE
+* **Language:** Python 3.8+
+
+## Repository Structure
+
+```
+├── src/
+│   ├── app.py              # Streamlit dashboard (entry point)
+│   ├── model.py            # Forecasting engine (Prophet, ARIMA, XGBoost, Ensemble)
+│   └── preprocessor.py     # Data loading and cleaning utilities
+├── data/
+│   └── raw/                # Historical sales CSVs (March–October 2025)
+├── models/                 # Model definitions and evaluation utilities
+└── analysis/               # Exploratory analysis scripts
+```
+
+## Quick Start
+
+```bash
+# 1. Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate     # macOS/Linux
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Launch dashboard
+python -m streamlit run src/app.py
+```
+
+The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to begin.
+
+## Forecasting Performance
+
+| Algorithm | Cappuccino MAPE | Americano MAPE | Croissant MAPE |
+| --------- | :-------------: | :------------: | :------------: |
+| Prophet   |      ~22%      |      ~15%      |     ~41%*     |
+| ARIMA     |      ~19%      |      ~12%      |      ~30%      |
+| XGBoost   |      ~20%      |      ~13%      |      ~28%      |
+| Ensemble  |      ~18%      |      ~11%      |      ~33%      |
+
+**Croissant series has high coefficient of variation (~30%), creating an inherent accuracy ceiling for all models.*
+
+## Contributors
+
+| Name                   | Focus Area                                                                            |
+| ---------------------- | ------------------------------------------------------------------------------------- |
+| Hasaan Ahmad           | Forecasting algorithms, Pseudocode, System architecture, Streamlit App Development    |
+| Chouaib Hakim          | Literature review (food waste reduction), Use case Diagram, Streamlit App Development |
+| Ishaq Modassir Mushtaq | Data Preprocessing, Class diagrams                                                    |
+| Rayyan Tahir           | Software engineering practices, Sequence Diagrams,                                    |
+| Royden Valerian Dias   | UI/UX wireframes, Dashboard Design, Streamlit App Development                         |
+
+## License
+
+Developed for UFCF7S-30-2 coursework at UWE Bristol. Contact the project team for reuse or distribution permissions.
