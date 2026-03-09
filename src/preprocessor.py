@@ -1,84 +1,84 @@
-import pandas as pd
-import matplotlib
-
-matplotlib.use("TkAgg")
-
-import matplotlib.pyplot as plt
 import os
+import pandas as pd
 
-file_paths = ['./data/raw/Pink_CroissantSales_March-Oct_2025.csv', './data/raw/Pink_CoffeeSales_March - Oct 2025.csv']
-def read_file(file_path):
-    type_item = 0
-    
-    # Coffee file has a 2-row header structure - combine headers from both rows
-    if "Coffee" in file_path:
-        type_item = 2
-        # Read first two rows to extract header information
-        header_row1 = pd.read_csv(file_path, nrows=0).columns.tolist()
-        header_row2 = pd.read_csv(file_path, skiprows=1, nrows=0).columns.tolist()
-        
-        # Combine headers intelligently
-        combined_headers = []
-        for i, (col1, col2) in enumerate(zip(header_row1, header_row2)):
-            # First column: use row 1 (Date)
-            # Other columns: prefer row 2 if it has meaningful data
-            if i == 0 and col1 and not col1.startswith('Unnamed'):
-                combined_headers.append(col1)
-            elif col2 and not col2.startswith('Unnamed') and col2.strip():
-                combined_headers.append(col2)
-            elif col1 and not col1.startswith('Unnamed'):
-                combined_headers.append(col1)
-            else:
-                combined_headers.append(f'Column_{i}')  # fallback
-        
-        # Read data skipping first row, then set proper column names
-        data = pd.read_csv(file_path, skiprows=1)
-        data.columns = combined_headers
-        
-    elif "Croissant" in file_path:
-        type_item = 1
-        data = pd.read_csv(file_path)
-        if "Number Sold" in data.columns:
-            data = data.rename(columns={"Number Sold": "Croissants"})
-    else:
-        data = pd.read_csv(file_path)
-    
-    return data, type_item
+_BASE = os.path.join(os.path.dirname(__file__), "..", "data", "raw")
+COFFEE_PATH = os.path.join(_BASE, "Pink_CoffeeSales_March - Oct 2025.csv")
+CROISSANT_PATH = os.path.join(_BASE, "Pink_CroissantSales_March-Oct_2025.csv")
 
-def data_clean(data):
-    data.dropna(inplace=False)
-    data.drop_duplicates(inplace=False)
-    data['Date'] = pd.to_datetime(data['Date'], format= '%d/%m/%Y')
+
+def _read_coffee(file_path: str) -> pd.DataFrame:
+    header_row1 = pd.read_csv(file_path, nrows=0).columns.tolist()
+    header_row2 = pd.read_csv(file_path, skiprows=1, nrows=0).columns.tolist()
+
+    combined_headers = []
+    for i, (col1, col2) in enumerate(zip(header_row1, header_row2)):
+        if i == 0 and col1 and not col1.startswith("Unnamed"):
+            combined_headers.append(col1)
+        elif col2 and not col2.startswith("Unnamed") and col2.strip():
+            combined_headers.append(col2)
+        elif col1 and not col1.startswith("Unnamed"):
+            combined_headers.append(col1)
+        else:
+            combined_headers.append(f"Column_{i}")
+
+    data = pd.read_csv(file_path, skiprows=1)
+    data.columns = combined_headers
     return data
 
-def plot_data(data, output_path='plot.png', drink_name=None):
-    headers = data.columns.tolist()
-    date_column = headers[0]
-    plt.figure(figsize=(14, 6))
-    if drink_name:
-        if drink_name not in data.columns:
-            print(f"Warning: '{drink_name}' not found in data. Available columns: {headers[1:]}")
-            plt.close()
-            return
-        data.plot(x=date_column, y=drink_name, kind='line', marker='o')
-        plt.title(f'{drink_name} Sales Over Time')
-    else:
-        data.plot(x=date_column, kind='line')
-        plt.title('Sales Data Over Time')
-    plt.xlabel('Date')
-    plt.ylabel('Number Sold')
-    plt.savefig(output_path, bbox_inches='tight', dpi=300)
-    plt.close()  # Close the figure to free memory
-    print(f"Plot saved to: {output_path}")
 
- #testng the functions
-if __name__ == "__main__":    
-    for i, file in enumerate(file_paths):
-        data, type_item = read_file(file)
-        clean_data = data_clean(data)
-        filename = os.path.basename(file).replace('.csv', '.png')
-        output_path = f'./data/processed/{filename}'
-        plot_data(clean_data, output_path)
-        if type_item == 2:  # If it's the Coffee file, also plot a single drink
-            plot_data(clean_data, f'./data/processed/Cappuccino_{filename}', drink_name='Cappuccino')
-            plot_data(clean_data, f'./data/processed/Americano_{filename}', drink_name='Americano')
+def _read_croissant(file_path: str) -> pd.DataFrame:
+    data = pd.read_csv(file_path)
+    if "Number Sold" in data.columns:
+        data = data.rename(columns={"Number Sold": "Croissants"})
+    return data
+
+
+def _clean(data: pd.DataFrame) -> pd.DataFrame:
+    data = data.copy()
+    data["Date"] = pd.to_datetime(data["Date"], format="%d/%m/%Y", errors="coerce")
+    data = data.dropna()
+    data = data.drop_duplicates()
+    data = data.sort_values("Date").reset_index(drop=True)
+    return data
+
+
+def load_coffee() -> pd.DataFrame:
+    return _clean(_read_coffee(COFFEE_PATH))
+
+
+def load_croissant() -> pd.DataFrame:
+    return _clean(_read_croissant(CROISSANT_PATH))
+
+
+def load_all() -> pd.DataFrame:
+    coffee = load_coffee()
+    croissant = load_croissant()
+    return pd.merge(coffee, croissant, on="Date", how="inner")
+
+
+def to_series(df: pd.DataFrame, product: str) -> pd.DataFrame:
+    if product not in df.columns:
+        raise ValueError(
+            f"Product '{product}' not found. "
+            f"Available: {[c for c in df.columns if c != 'Date']}"
+        )
+    series = df[["Date", product]].rename(columns={"Date": "ds", product: "y"})
+    series["y"] = pd.to_numeric(series["y"], errors="coerce")
+    return series.dropna().sort_values("ds").reset_index(drop=True)
+
+
+if __name__ == "__main__":
+    coffee = load_coffee()
+    print(coffee.head())
+    print(f"Shape: {coffee.shape}, Columns: {coffee.columns.tolist()}")
+
+    croissant = load_croissant()
+    print(croissant.head())
+    print(f"Shape: {croissant.shape}, Columns: {croissant.columns.tolist()}")
+
+    all_data = load_all()
+    print(all_data.head())
+    print(f"Shape: {all_data.shape}, Columns: {all_data.columns.tolist()}")
+
+    series = to_series(all_data, "Cappuccino")
+    print(series.head())

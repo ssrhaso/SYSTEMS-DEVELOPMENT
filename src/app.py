@@ -1,1119 +1,1033 @@
-"""
-app.py - Bristol Pink Cafe Sales Forecasting Dashboard (Streamlit)
-
-Wireframes implemented:
-  Tab 1  Data          CSV upload (multi-format), data status card
-  Tab 2  Insights      Sales-over-time line, top-products bar, performance table
-  Tab 3  Forecast      Model config, metrics row, 28-day chart, CSV/PNG export
-
-Integrates with model.py via run_forecast(series, algorithm, train_weeks)
-"""
-
-from __future__ import annotations
-
-import io
-import datetime
+import os
+import sys
+import warnings
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
-# Page config - MUST be the absolute first Streamlit command
+warnings.filterwarnings("ignore")
+
+sys.path.insert(0, os.path.dirname(__file__))
+from preprocessor import load_all, to_series
+from model import run_forecast, VALID_ALGORITHMS
+
+
 st.set_page_config(
-    page_title="Bristol Pink Cafe - Sales Forecasting",
-    page_icon="",
+    page_title="Bristol Pink Café Analytics",
+    page_icon=":coffee:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-# Import forecasting backend (model.py in the same src/ directory)
-import sys, os
+PINK = "#E8547A"
+PINK_DARK = "#C0395E"
+WHITE = "#FFFFFF"
+TEXT_DARK = "#111827"
+TEXT_MID = "#6B7280"
+BORDER = "#E5E7EB"
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+PRODUCT_COLOURS = {
+    "Cappuccino": "#E8547A",
+    "Americano": "#BE185D",
+    "Croissants": "#8B5CF6",
+}
 
-try:
-    from model import run_forecast, VALID_ALGORITHMS
+PRODUCTS = ["Cappuccino", "Americano", "Croissants"]
 
-    _MODEL_OK = True
-except ImportError:
-    run_forecast = None
-    VALID_ALGORITHMS = {"Prophet", "ARIMA", "XGBoost", "Ensemble"}
-    _MODEL_OK = False
+NAV_ITEMS = [
+    ("Dashboard", "fa-chart-line"),
+    ("Reports", "fa-file-lines"),
+    ("Settings", "fa-gear"),
+]
 
-# Colour palette
-PINK = "#E91E8C"
-PINK_LIGHT = "#FFE4F3"
-DARK = "#1A1A1A"
-BORDER = "#E0E0E0"
-NEG_RED = "#E74C3C"
 
-# Custom CSS - match the design wireframes
 st.markdown(
-    f"""
-<style>
-/* SIDEBAR */
-section[data-testid="stSidebar"] {{
-    background-color: {DARK} !important;
-}}
-section[data-testid="stSidebar"] * {{
-    color: #ffffff !important;
-}}
-section[data-testid="stSidebar"] button[data-testid="baseButton-primary"] {{
-    background-color: {PINK} !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    width: 100%;
-}}
-section[data-testid="stSidebar"] button[data-testid="baseButton-primary"]:hover {{
-    background-color: #c4177a !important;
-}}
-section[data-testid="stSidebar"] button[data-testid="baseButton-secondary"] {{
-    background-color: transparent !important;
-    color: #fff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: 600 !important;
-    width: 100%;
-}}
-section[data-testid="stSidebar"] button[data-testid="baseButton-secondary"]:hover {{
-    background-color: #333 !important;
-}}
-
-/* TABS */
-.stTabs [data-baseweb="tab-list"] {{
-    gap: 0;
-    border-bottom: 2px solid #eee;
-}}
-.stTabs [data-baseweb="tab"] {{
-    padding: 0.6rem 1.5rem;
-    font-weight: 600;
-    font-size: 1rem;
-    color: #555;
-    border-bottom: 3px solid transparent;
-}}
-.stTabs [data-baseweb="tab"][aria-selected="true"] {{
-    color: {PINK} !important;
-    border-bottom: 3px solid {PINK} !important;
-}}
-
-/* CARDS */
-.card {{
-    border: 1.5px solid {BORDER};
-    border-radius: 16px;
-    padding: 1.5rem;
-    background: #ffffff;
-    margin-bottom: 1rem;
-}}
-.card-title {{
-    font-size: 1.25rem;
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-    color: #111;
-}}
-
-/* UPLOAD AREA */
-.upload-area {{
-    border: 2.5px dashed #ccc;
-    border-radius: 16px;
-    text-align: center;
-    padding: 2rem 1rem;
-    margin-bottom: 1rem;
-    background: #fafafa;
-}}
-.upload-icon {{
-    font-size: 3rem;
-    color: {PINK};
-    margin-bottom: 0.5rem;
-}}
-
-/* METRIC CARDS */
-.metric-card {{
-    background: #f9f9f9;
-    border: 1px solid {BORDER};
-    border-radius: 12px;
-    padding: 1rem;
-    text-align: center;
-}}
-.metric-value {{
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: {PINK};
-}}
-.metric-label {{
-    color: #666;
-    font-size: 0.85rem;
-    margin-top: 0.25rem;
-}}
-
-/* PERFORMANCE TABLE */
-.perf-table {{
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 0.95rem;
-}}
-.perf-table th {{
-    text-align: left;
-    padding: 0.65rem 1rem;
-    border-bottom: 2px solid #555;
-    font-weight: 700;
-    color: #ddd;
-}}
-.perf-table td {{
-    padding: 0.6rem 1rem;
-    border-bottom: 1px solid #444;
-    color: #ccc;
-}}
-.pct-pos {{ color: {PINK}; font-weight: 600; }}
-.pct-neg {{ color: {NEG_RED}; font-weight: 600; }}
-
-/* HEADER */
-.main-title {{
-    font-size: 1.75rem;
-    font-weight: 800;
-    color: #111;
-    margin: 0;
-}}
-.main-subtitle {{
-    color: #777;
-    font-size: 0.95rem;
-    margin-top: 2px;
-}}
-
-/* PLACEHOLDERS */
-.status-empty, .forecast-empty {{
-    text-align: center;
-    padding: 2.5rem 1rem;
-    color: #aaa;
-}}
-.status-icon {{ font-size: 2.5rem; margin-bottom: 0.5rem; }}
-
-/* GENERAL */
-.block-container {{ padding-top: 1.5rem !important; }}
-
-button[data-testid="baseButton-primary"] {{
-    background-color: {PINK} !important;
-    border-color: {PINK} !important;
-    color: #fff !important;
-    border-radius: 24px !important;
-}}
-button[data-testid="baseButton-primary"]:hover {{
-    background-color: #c4177a !important;
-    border-color: #c4177a !important;
-}}
-div[data-testid="stFileUploader"] button {{
-    background-color: {PINK} !important;
-    color: #fff !important;
-    border-radius: 24px !important;
-    border: none !important;
-}}
-.stDownloadButton > button {{
-    border-radius: 24px !important;
-    font-weight: 600 !important;
-}}
-</style>
-""",
+    '<link rel="stylesheet" '
+    'href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/'
+    '6.5.0/css/all.min.css" crossorigin="anonymous"/>',
     unsafe_allow_html=True,
 )
 
-# Session-state initialisation
-_DEFAULTS = {
-    "page": "Dashboard",
-    "df": None,
-    "products": [],
-    "categories": [],
-    "upload_key": None,
-    "forecast_result": None,
-    "time_range": "1 Week",
-}
-for k, v in _DEFAULTS.items():
-    if k not in st.session_state:
-        st.session_state[k] = v
+st.markdown("""<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-# Sidebar - branding + navigation
+:root { color-scheme: light !important; }
+
+html, body, [class*="css"] {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+    color: #111827 !important;
+}
+
+.stApp { background-color: #F8F9FA !important; }
+.main .block-container {
+    background-color: #F8F9FA !important;
+    padding: 1.8rem 2.2rem 2rem 2.2rem !important;
+    max-width: 1400px;
+}
+
+.main p, .main span, .main label, .main td, .main th, .main li,
+[data-testid="stMainBlockContainer"] p,
+[data-testid="stMainBlockContainer"] span,
+[data-testid="stMarkdownContainer"] p,
+[data-testid="stMarkdownContainer"] td,
+[data-testid="stMarkdownContainer"] th,
+[data-testid="stMarkdownContainer"] span { color: #111827 !important; }
+
+[data-testid="stCaptionContainer"] p,
+[data-testid="stCaptionContainer"] span { color: #6B7280 !important; }
+
+input[type="checkbox"] { accent-color: #E8547A !important; }
+[data-testid="stCheckbox"] label p,
+[data-testid="stCheckbox"] label span,
+[data-testid="stCheckbox"] p { color: #111827 !important; }
+[data-testid="stCheckbox"] label:hover span { color: #E8547A !important; }
+
+input[type="radio"] { accent-color: #E8547A !important; }
+[data-testid="stRadio"] label p,
+[data-testid="stRadio"] label span,
+[data-testid="stRadio"] p { color: #111827 !important; }
+[data-testid="stRadio"] label:hover span { color: #E8547A !important; }
+
+[data-testid="stTextInput"] label p { color: #111827 !important; }
+[data-baseweb="input"] {
+    background-color: #FFFFFF !important;
+    border-color: #E5E7EB !important;
+    border-radius: 8px !important;
+}
+[data-baseweb="input"] input {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    background-color: #FFFFFF !important;
+    opacity: 1 !important;
+}
+[data-baseweb="input"]:focus-within {
+    border-color: #E8547A !important;
+    box-shadow: 0 0 0 2px rgba(232,84,122,0.15) !important;
+}
+[data-testid="stTextInput"] input:disabled,
+[data-baseweb="input"][aria-disabled="true"] input {
+    color: #111827 !important;
+    -webkit-text-fill-color: #111827 !important;
+    background-color: #F3F4F6 !important;
+    opacity: 1 !important;
+}
+
+[data-testid="stSelectbox"] label p { color: #111827 !important; }
+[data-testid="stSelectbox"] > div > div {
+    background-color: #FFFFFF !important;
+    border-color: #E5E7EB !important;
+    border-radius: 8px !important;
+    color: #111827 !important;
+}
+
+[data-testid="stSlider"] label p { color: #111827 !important; }
+[data-testid="stSlider"] [role="slider"] { background: #E8547A !important; }
+
+[data-testid="stFileUploader"] span,
+[data-testid="stFileUploader"] p,
+[data-testid="stFileUploader"] small,
+[data-testid="stFileUploader"] div { color: #111827 !important; }
+[data-testid="stFileUploader"] section {
+    background: #FDE8EE !important;
+    border: 2px dashed #E8547A !important;
+    border-radius: 10px !important;
+}
+[data-testid="stFileUploader"] section:hover {
+    background: #fad4de !important;
+    border-color: #C0395E !important;
+}
+[data-testid="stFileUploader"] button {
+    background: #FFFFFF !important;
+    color: #111827 !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 6px !important;
+    font-weight: 500 !important;
+    transition: background 0.15s, border-color 0.15s !important;
+}
+[data-testid="stFileUploader"] button:hover {
+    background: #F3F4F6 !important;
+    border-color: #E8547A !important;
+    color: #E8547A !important;
+}
+
+.stButton > button {
+    background: #FFFFFF !important;
+    color: #111827 !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 8px !important;
+    font-size: 0.86rem !important;
+    font-weight: 500 !important;
+    transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+    box-shadow: none !important;
+}
+.stButton > button:hover {
+    background: #F3F4F6 !important;
+    border-color: #E8547A !important;
+    color: #E8547A !important;
+}
+
+button[data-testid="baseButton-primary"],
+[data-testid="baseButton-primary"] {
+    background: #E8547A !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(232,84,122,0.30) !important;
+    transition: background 0.15s, box-shadow 0.15s !important;
+}
+button[data-testid="baseButton-primary"]:hover {
+    background: #C0395E !important;
+    box-shadow: 0 4px 12px rgba(232,84,122,0.40) !important;
+}
+
+[data-testid="stDownloadButton"] > button {
+    background: #FFFFFF !important;
+    color: #111827 !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    font-size: 0.86rem !important;
+    transition: background 0.15s, border-color 0.15s, color 0.15s !important;
+    box-shadow: none !important;
+}
+[data-testid="stDownloadButton"] > button:hover {
+    background: #F3F4F6 !important;
+    border-color: #E8547A !important;
+    color: #E8547A !important;
+}
+
+[data-testid="stSidebar"],
+[data-testid="stSidebar"] > div,
+[data-testid="stSidebar"] > div > div,
+[data-testid="stSidebar"] > div > div > div,
+section[data-testid="stSidebar"],
+section[data-testid="stSidebar"] > div,
+section[data-testid="stSidebar"] > div:first-child,
+section[data-testid="stSidebar"] > div:first-child > div {
+    background-color: #111111 !important;
+    background-image: none !important;
+    border-right: none !important;
+}
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] div,
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] small { color: #FFFFFF !important; }
+section[data-testid="stSidebar"] hr {
+    border-color: rgba(255,255,255,0.12) !important;
+    margin: 0.5rem 0 !important;
+}
+
+[data-testid="stSidebar"] .stButton > button {
+    background: transparent !important;
+    color: rgba(255,255,255,0.72) !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
+    border-radius: 8px !important;
+    width: 100% !important;
+    text-align: left !important;
+    padding: 0.62rem 1rem !important;
+    min-height: 2.6rem !important;
+    font-size: 0.91rem !important;
+    font-weight: 500 !important;
+    margin-bottom: 3px !important;
+    box-shadow: none !important;
+    justify-content: flex-start !important;
+    transition: background 0.15s, color 0.15s, border-color 0.15s !important;
+}
+[data-testid="stSidebar"] .stButton > button:hover {
+    background: rgba(232,84,122,0.18) !important;
+    color: #E8547A !important;
+    border-color: #E8547A !important;
+}
+[data-testid="stSidebar"] .stButton > button:disabled {
+    background: rgba(232,84,122,0.18) !important;
+    color: #E8547A !important;
+    border: 1px solid #E8547A !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    opacity: 1 !important;
+    cursor: default !important;
+}
+
+#MainMenu, footer, header { visibility: hidden !important; }
+.stDeployButton { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
+[data-testid="stSidebarCollapseButton"] { display: none !important; }
+
+.stTabs [data-baseweb="tab-list"] {
+    background: #FFFFFF !important;
+    border-radius: 10px 10px 0 0 !important;
+    padding: 0 1.2rem !important;
+    border-bottom: 2px solid #E5E7EB !important;
+    gap: 0 !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
+}
+.stTabs [data-baseweb="tab"] {
+    font-size: 0.88rem !important;
+    font-weight: 500 !important;
+    color: #6B7280 !important;
+    padding: 0.85rem 1.4rem !important;
+    border-bottom: 2px solid transparent !important;
+    background: transparent !important;
+    transition: color 0.15s !important;
+}
+.stTabs [data-baseweb="tab"]:hover { color: #E8547A !important; }
+.stTabs [aria-selected="true"] {
+    color: #E8547A !important;
+    border-bottom-color: #E8547A !important;
+    font-weight: 600 !important;
+}
+.stTabs [data-testid="stTabsContent"] {
+    background: #FFFFFF !important;
+    border-radius: 0 0 12px 12px !important;
+    padding: 1.6rem 1.6rem 1.8rem !important;
+    border: 1px solid #E5E7EB !important;
+    border-top: none !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+}
+
+[data-testid="stVerticalBlockBorderWrapper"] {
+    background: #FFFFFF !important;
+    border-radius: 12px !important;
+    border: 1px solid #E5E7EB !important;
+    padding: 0.6rem !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04) !important;
+}
+
+[data-testid="stMetric"] {
+    background: #FFFFFF !important;
+    border: 1px solid #E5E7EB !important;
+    border-radius: 10px !important;
+    padding: 1rem 1.25rem !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+    transition: box-shadow 0.15s !important;
+}
+[data-testid="stMetric"]:hover {
+    box-shadow: 0 4px 12px rgba(232,84,122,0.12) !important;
+}
+[data-testid="stMetricLabel"] p {
+    font-size: 0.78rem !important;
+    color: #6B7280 !important;
+    font-weight: 500 !important;
+}
+[data-testid="stMetricValue"] {
+    font-size: 1.5rem !important;
+    font-weight: 700 !important;
+    color: #111827 !important;
+}
+
+[data-testid="stExpander"] {
+    border: 1px solid #E5E7EB !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+}
+[data-testid="stExpander"] summary {
+    background-color: #111827 !important;
+    padding: 0.7rem 1rem !important;
+    cursor: pointer !important;
+}
+[data-testid="stExpander"] summary p,
+[data-testid="stExpander"] summary span,
+[data-testid="stExpander"] summary svg {
+    color: #FFFFFF !important;
+    fill: #FFFFFF !important;
+}
+[data-testid="stExpander"] summary:hover {
+    background-color: #1F2937 !important;
+}
+[data-testid="stExpander"] [data-testid="stExpanderDetails"] {
+    background: #FFFFFF !important;
+    padding: 0.8rem !important;
+    border-top: 1px solid #E5E7EB !important;
+}
+
+[data-testid="stDataFrame"] > div {
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    border: 1px solid #E5E7EB !important;
+}
+
+[data-testid="stAlert"] { border-radius: 8px !important; }
+
+hr { border-color: #E5E7EB !important; margin: 0.65rem 0 !important; }
+</style>""", unsafe_allow_html=True)
+
+
+for _k, _v in [
+    ("page", "Dashboard"),
+    ("forecast_res", None),
+    ("forecast_cfg", {}),
+    ("notifications", {
+        "forecast_alerts": True,
+        "low_stock": True,
+        "weekly_reports": False,
+        "upload_status": True,
+    }),
+]:
+    if _k not in st.session_state:
+        st.session_state[_k] = _v
+
+
+@st.cache_data(show_spinner=False)
+def get_data() -> pd.DataFrame:
+    return load_all()
+
+try:
+    df = get_data()
+    data_loaded = True
+    data_error = None
+except Exception as exc:
+    df = pd.DataFrame()
+    data_loaded = False
+    data_error = str(exc)
+
+
+def html_table(data: pd.DataFrame):
+    header_cells = "".join(
+        f"<th style='background:#F3F4F6;color:#111827;font-weight:600;"
+        f"padding:0.55rem 0.85rem;text-align:left;font-size:0.83rem;"
+        f"border-bottom:2px solid #E5E7EB;white-space:nowrap;'>{col}</th>"
+        for col in data.columns
+    )
+    rows_html = ""
+    for i, row in enumerate(data.itertuples(index=False)):
+        bg = "#FFFFFF" if i % 2 == 0 else "#F9FAFB"
+        cells = "".join(
+            f"<td style='padding:0.48rem 0.85rem;color:#111827;"
+            f"font-size:0.83rem;border-bottom:1px solid #F3F4F6;"
+            f"white-space:nowrap;'>{v}</td>"
+            for v in row
+        )
+        rows_html += f"<tr style='background:{bg};'>{cells}</tr>"
+    st.markdown(
+        f"<div style='overflow-x:auto;border:1px solid #E5E7EB;"
+        f"border-radius:8px;margin-top:0.4rem;'>"
+        f"<table style='width:100%;border-collapse:collapse;'>"
+        f"<thead><tr>{header_cells}</tr></thead>"
+        f"<tbody>{rows_html}</tbody>"
+        f"</table></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def pink_info(msg: str):
+    st.markdown(
+        f"<div style='background:#FDE8EE;border:1px solid #E8547A;"
+        f"border-left:4px solid #E8547A;border-radius:8px;"
+        f"padding:0.7rem 1rem;margin:0.4rem 0;'>"
+        f"<span style='color:#7C1D36;font-size:0.875rem;'>"
+        f"<i class='fa-solid fa-circle-info' style='color:#E8547A;"
+        f"margin-right:0.4rem;'></i>{msg}</span></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def section_title(fa_icon: str, text: str):
+    st.markdown(
+        f"<p style='font-weight:600;font-size:0.93rem;color:{TEXT_DARK};"
+        f"margin:0 0 0.8rem 0;display:flex;align-items:center;gap:0.5rem;'>"
+        f"<i class='fa-solid {fa_icon}' style='color:{PINK};"
+        f"font-size:0.85rem;'></i> {text}</p>",
+        unsafe_allow_html=True,
+    )
+
+
+def badge_html(text: str, green: bool = True) -> str:
+    bg = "#DCFCE7" if green else "#F3F4F6"
+    fg = "#15803D" if green else "#6B7280"
+    return (
+        f"<span style='background:{bg};color:{fg};"
+        f"padding:0.2rem 0.75rem;border-radius:20px;"
+        f"font-size:0.78rem;font-weight:600;'>{text}</span>"
+    )
+
+
+def page_header(title: str, subtitle: str):
+    st.markdown(
+        f"<div style='padding-bottom:1rem;margin-bottom:1.4rem;"
+        f"border-bottom:1px solid {BORDER};'>"
+        f"<h2 style='font-size:1.35rem;font-weight:700;"
+        f"color:{TEXT_DARK};margin:0 0 0.2rem 0;'>{title}</h2>"
+        f"<p style='font-size:0.87rem;color:{TEXT_MID};margin:0;'>"
+        f"{subtitle}</p></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def check_row(label: str, passed):
+    if passed is True:
+        icon, clr = "fa-circle-check", "#22C55E"
+    elif passed is False:
+        icon, clr = "fa-circle-xmark", "#EF4444"
+    else:
+        icon, clr = "fa-circle", "#D1D5DB"
+    st.markdown(
+        f"<div style='display:flex;align-items:center;gap:0.5rem;"
+        f"padding:0.3rem 0;font-size:0.86rem;color:{TEXT_DARK};'>"
+        f"<i class='fa-solid {icon}' style='color:{clr};"
+        f"font-size:0.84rem;'></i>"
+        f"<span>{label}</span></div>",
+        unsafe_allow_html=True,
+    )
+
+
+def plotly_axes(fig, height=270, top=10, y_title="Units Sold",
+                x_tickformat="%d %b"):
+    axis_font = dict(color="#374151", size=11)
+    fig.update_layout(
+        height=height,
+        margin=dict(l=0, r=0, t=top, b=0),
+        plot_bgcolor=WHITE,
+        paper_bgcolor=WHITE,
+        font=dict(color="#374151", family="Inter, sans-serif"),
+        xaxis=dict(
+            showgrid=False,
+            tickformat=x_tickformat,
+            tickfont=axis_font,
+            title=dict(font=axis_font),
+        ),
+        yaxis=dict(
+            gridcolor="#F0F0F0",
+            tickfont=axis_font,
+            title=dict(text=y_title, font=axis_font),
+        ),
+    )
+
+
 with st.sidebar:
     st.markdown(
-        f"""
-        <div style="text-align:center; padding:1.2rem 0 0.8rem 0;">
-            <span style="font-size:2.4rem;">&#9749;</span>
-            <div style="font-size:1.35rem; font-weight:800; line-height:1.2; margin-top:4px;">
-                Bristol<br>Pink Cafe
-            </div>
-            <div style="font-size:0.82rem; color:{PINK}; font-weight:600; margin-top:2px;">
-                Analytics
-            </div>
-        </div>
-        """,
+        "<div style='padding:0.8rem 0 0.5rem 0;'>"
+        "<div style='font-size:1.35rem;font-weight:800;"
+        "letter-spacing:-0.3px;color:#FFFFFF;'>Bristol Pink</div>"
+        "<div style='font-size:0.76rem;color:rgba(255,255,255,0.45);"
+        "margin-top:0.15rem;'>Café Analytics</div>"
+        "</div>",
         unsafe_allow_html=True,
     )
+    st.divider()
 
-    st.markdown("<div style='height:0.8rem'></div>", unsafe_allow_html=True)
-
-    for _page in ("Dashboard", "Reports", "Settings"):
-        _active = st.session_state.page == _page
-        if st.button(
-            _page,
-            key=f"nav_{_page}",
-            use_container_width=True,
-            type="primary" if _active else "secondary",
-        ):
-            st.session_state.page = _page
+    for label, icon in NAV_ITEMS:
+        is_active = st.session_state.page == label
+        if st.button(label, key=f"nav_{label}",
+                     use_container_width=True, disabled=is_active):
+            st.session_state.page = label
+            st.session_state.forecast_res = None
             st.rerun()
 
-# Default location
-DEFAULT_LOCATION = "Bristol Centre"
-
-
-# CSV parsing helper (handles three layouts)
-def _parse_single_csv(
-    uploaded_file, default_location: str
-) -> tuple[pd.DataFrame | None, str]:
-    """
-    Parse one uploaded CSV into long-form DataFrame with columns:
-        Date, Product, Category, Units Sold, Location
-
-    Supported layouts:
-      A  Standard long-format (Date, Product, Category, Units Sold, ...)
-      B  Coffee wide-format (two-row header: Date/Number Sold + Cappuccino/Americano)
-      C  Croissant simple (Date, Number Sold)
-
-    Returns (df | None, error_message).
-    """
-    # read raw text
-    try:
-        raw = uploaded_file.read().decode("utf-8")
-        uploaded_file.seek(0)
-    except Exception as exc:
-        return None, f"Cannot read file: {exc}"
-
-    lines = [l for l in raw.strip().splitlines() if l.strip()]
-
-    if len(lines) < 2:
-        return None, "File is empty or contains no data rows."
-
-    # helper: flexible column lookup (case-insensitive)
-    def _col(cols_lower: dict, candidates: list[str]) -> str | None:
-        for c in candidates:
-            if c in cols_lower:
-                return cols_lower[c]
-        return None
-
-    # Layout A: standard long-format
-    try:
-        df = pd.read_csv(io.StringIO(raw))
-        cl = {c.strip().lower().replace("_", " "): c.strip() for c in df.columns}
-
-        date_c = _col(cl, ["date"])
-        prod_c = _col(cl, ["product", "product name"])
-        unit_c = _col(cl, ["units sold", "number sold", "quantity", "quantity sold"])
-
-        if date_c and prod_c and unit_c:
-            rename = {date_c: "Date", prod_c: "Product", unit_c: "Units Sold"}
-
-            cat_c = _col(cl, ["category"])
-            if cat_c:
-                rename[cat_c] = "Category"
-
-            loc_c = _col(cl, ["location"])
-            if loc_c:
-                rename[loc_c] = "Location"
-
-            df = df.rename(columns=rename)
-
-            df["Date"] = pd.to_datetime(df["Date"], dayfirst=True, errors="coerce")
-            df["Units Sold"] = pd.to_numeric(df["Units Sold"], errors="coerce")
-
-            if df["Date"].isna().all():
-                raise ValueError("No parseable dates.")
-            if df["Units Sold"].isna().all():
-                raise ValueError("No valid numeric units-sold values.")
-
-            df = df.dropna(subset=["Date", "Units Sold"])
-            df["Units Sold"] = df["Units Sold"].astype(int)
-
-            if "Category" not in df.columns:
-                df["Category"] = "General"
-            if "Location" not in df.columns:
-                df["Location"] = default_location
-
-            return df[["Date", "Product", "Category", "Units Sold", "Location"]], ""
-    except Exception:
-        pass  # fall through to layout B / C
-
-    # Layout B / C: wide-format raw files
-    try:
-        first_line = lines[0]
-        second_line = lines[1] if len(lines) > 1 else ""
-
-        # Coffee file (two-row header)
-        if "Cappuccino" in second_line or "Americano" in second_line:
-            headers = [h.strip() for h in second_line.split(",")]
-            data_text = "\n".join(lines[2:])
-            df_w = pd.read_csv(io.StringIO(data_text), header=None)
-
-            col_names = headers[: len(df_w.columns)]
-            while len(col_names) < len(df_w.columns):
-                col_names.append(f"_extra_{len(col_names)}")
-            df_w.columns = col_names
-
-            date_col = col_names[0] if col_names[0] else "Date"
-            if not col_names[0]:
-                df_w = df_w.rename(columns={df_w.columns[0]: "Date"})
-                date_col = "Date"
-
-            product_cols = [
-                c
-                for c in df_w.columns[1:]
-                if c and not c.startswith("_extra") and not c.startswith("Unnamed")
-            ]
-            if not product_cols:
-                return None, "No product columns found in coffee file."
-
-            parts = []
-            for pc in product_cols:
-                tmp = df_w[[date_col, pc]].copy()
-                tmp.columns = ["Date", "Units Sold"]
-                tmp["Product"] = pc
-                tmp["Category"] = "Coffee"
-                parts.append(tmp)
-
-            df_long = pd.concat(parts, ignore_index=True)
-
-        # Croissant file (Date, Number Sold)
-        elif "Number Sold" in first_line or "croissant" in first_line.lower():
-            df_w = pd.read_csv(io.StringIO(raw))
-            date_col = df_w.columns[0]
-            val_col = [c for c in df_w.columns if c != date_col][0]
-            df_long = df_w[[date_col, val_col]].copy()
-            df_long.columns = ["Date", "Units Sold"]
-            df_long["Product"] = "Croissant"
-            df_long["Category"] = "Pastry"
-
-        # Generic wide: first col = date, rest = products
-        else:
-            df_w = pd.read_csv(io.StringIO(raw))
-            date_col = df_w.columns[0]
-            product_cols = [
-                c for c in df_w.columns[1:] if not str(c).startswith("Unnamed")
-            ]
-            if not product_cols:
-                return None, "Could not detect any product columns."
-
-            parts = []
-            for pc in product_cols:
-                tmp = df_w[[date_col, pc]].copy()
-                tmp.columns = ["Date", "Units Sold"]
-                tmp["Product"] = pc
-                tmp["Category"] = "General"
-                parts.append(tmp)
-            df_long = pd.concat(parts, ignore_index=True)
-
-        # clean
-        df_long["Date"] = pd.to_datetime(df_long["Date"], dayfirst=True, errors="coerce")
-        df_long["Units Sold"] = pd.to_numeric(df_long["Units Sold"], errors="coerce")
-
-        if df_long["Date"].isna().all():
-            return None, "Could not parse any dates in the file."
-        if df_long["Units Sold"].isna().all():
-            return None, "No valid numeric values found for units sold."
-
-        df_long = df_long.dropna(subset=["Date", "Units Sold"])
-        df_long["Units Sold"] = df_long["Units Sold"].astype(int)
-        df_long["Location"] = default_location
-
-        if "Category" not in df_long.columns:
-            df_long["Category"] = "General"
-
-        return df_long[["Date", "Product", "Category", "Units Sold", "Location"]], ""
-
-    except Exception as exc:
-        return None, f"Could not parse file: {exc}"
-
-
-# PAGE: DASHBOARD
-if st.session_state.page == "Dashboard":
-
-    # Header
+    st.divider()
     st.markdown(
-        '<p class="main-title">Sales Forecasting Dashboard</p>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<p class="main-subtitle">Upload data, explore trends, and plan production</p>',
+        "<div style='font-size:0.72rem;color:rgba(255,255,255,0.35);"
+        "padding:0.1rem 0;'>Bristol Centre</div>",
         unsafe_allow_html=True,
     )
 
-    # Three tabs
+page = st.session_state.page
+
+
+if page == "Dashboard":
+    page_header(
+        "Sales Forecasting Dashboard",
+        "Upload data, explore trends, and plan 28-day production",
+    )
+
     tab_data, tab_insights, tab_forecast = st.tabs(
-        ["Data", "Insights", "Forecast & Export"]
+        ["  Data", "  Insights", "  Forecast & Export"]
     )
 
-    # TAB 1 - DATA
     with tab_data:
-        col_upload, col_status = st.columns([3, 2], gap="large")
+        left, right = st.columns([1.5, 1], gap="large")
 
-        # Left card: Upload
-        with col_upload:
-            st.markdown(
-                '<div class="card"><div class="card-title">Upload Sales CSV</div>',
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                """
-                <div class="upload-area">
-                    <div class="upload-icon">&#9729;&#8593;</div>
-                    <div style="color:#888; font-size:0.9rem; margin-top:4px;">
-                        Upload one or more CSV files
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-            uploaded_files = st.file_uploader(
-                "Upload CSV files",
-                type=["csv"],
-                accept_multiple_files=True,
-                label_visibility="collapsed",
-                help="Select .csv files with your sales data",
-            )
-
-            st.markdown(
-                '<p style="color:#888; font-size:0.85rem;">or drag and drop your files here</p>',
-                unsafe_allow_html=True,
-            )
-
-            st.markdown(
-                """
-**Expected CSV format:**
-- Date (DD/MM/YYYY)
-- Product name
-- Category
-- Units sold (numeric)
-- Location (optional)
-                """
-            )
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # process upload(s)
-            if uploaded_files:
-                upload_key = "|".join(
-                    sorted(f"{f.name}:{f.size}" for f in uploaded_files)
+        with left:
+            with st.container(border=True):
+                section_title("fa-upload", "Upload Sales CSV")
+                uploaded = st.file_uploader(
+                    "Upload CSV", type=["csv"],
+                    label_visibility="collapsed",
                 )
-                if upload_key != st.session_state.upload_key:
-                    all_frames: list[pd.DataFrame] = []
-                    errors: list[str] = []
-                    for uf in uploaded_files:
-                        df_parsed, err = _parse_single_csv(uf, DEFAULT_LOCATION)
-                        if err:
-                            errors.append(f"**{uf.name}:** {err}")
-                        elif df_parsed is not None and not df_parsed.empty:
-                            all_frames.append(df_parsed)
-
-                    if all_frames:
-                        combined = pd.concat(all_frames, ignore_index=True)
-                        st.session_state.df = combined
-                        st.session_state.upload_key = upload_key
-                        st.session_state.products = sorted(
-                            combined["Product"].unique().tolist()
-                        )
-                        st.session_state.categories = sorted(
-                            combined["Category"].unique().tolist()
-                        )
-                        st.session_state.forecast_result = None
+                st.caption(
+                    "Expected format: Date (DD/MM/YYYY)  "
+                    "·  Product columns  ·  Numeric values"
+                )
+                if uploaded:
+                    try:
+                        custom = pd.read_csv(uploaded)
                         st.success(
-                            f"**{len(combined):,}** records imported from "
-                            f"**{len(uploaded_files)}** file(s)"
+                            f"File loaded: **{uploaded.name}** — "
+                            f"{len(custom):,} rows detected"
                         )
-                    for e in errors:
-                        st.error(e)
-                    if not all_frames and not errors:
-                        st.warning("Uploaded files contained no usable data.")
+                        html_table(custom.head(8))
+                    except Exception as e:
+                        st.error(f"Could not read file: {e}")
+                elif data_loaded:
+                    pink_info("Using pre-loaded Pink Café data from /data/raw/")
+                    disp = df.head(8).copy()
+                    disp["Date"] = disp["Date"].dt.strftime("%d/%m/%Y")
+                    html_table(disp)
 
-        # Right card: Data Status
-        with col_status:
-            st.markdown(
-                '<div class="card"><div class="card-title">Data Status</div>',
-                unsafe_allow_html=True,
-            )
-
-            if st.session_state.df is not None:
-                df = st.session_state.df
-                n_rows = len(df)
-                n_prods = df["Product"].nunique()
-                d_min = df["Date"].min().strftime("%d %b %Y")
-                d_max = df["Date"].max().strftime("%d %b %Y")
-                n_days = (df["Date"].max() - df["Date"].min()).days + 1
-
-                st.markdown(
-                    f"""
-**File(s) loaded**
-
-**{n_rows:,}** records  |  **{n_prods}** product(s)
-
-**{d_min}** to **{d_max}** ({n_days} days)
-
-Categories: {', '.join(st.session_state.categories)}
-                    """
-                )
-                with st.expander("Preview first 20 rows"):
-                    st.dataframe(
-                        df.head(20), use_container_width=True, hide_index=True
+        with right:
+            with st.container(border=True):
+                section_title("fa-circle-info", "Data Status")
+                if data_loaded:
+                    st.markdown(badge_html("Data Loaded", green=True),
+                                unsafe_allow_html=True)
+                    st.markdown("")
+                    st.markdown(
+                        f"| | |\n|:--|:--|\n"
+                        f"| **Rows** | {len(df):,} |\n"
+                        f"| **Products** | Cappuccino, Americano, Croissants |\n"
+                        f"| **Date range** | "
+                        f"{df['Date'].min().strftime('%d %b %Y')} -> "
+                        f"{df['Date'].max().strftime('%d %b %Y')} |\n"
+                        f"| **Missing values** | {df.isnull().sum().sum()} |\n"
+                        f"| **Duplicates** | {df.duplicated().sum()} |"
                     )
-            else:
-                st.markdown(
-                    """
-                    <div class="status-empty">
-                        <div style="font-size:1rem;">No file uploaded</div>
-                    </div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                else:
+                    st.markdown(badge_html("No file loaded", green=False),
+                                unsafe_allow_html=True)
+                    if data_error:
+                        st.caption(data_error)
 
-            st.markdown("</div>", unsafe_allow_html=True)
+            st.markdown("")
 
-    # TAB 2 - INSIGHTS
+            with st.container(border=True):
+                section_title("fa-list-check", "Validation Rules")
+                if data_loaded:
+                    checks = [
+                        ("Required columns present",
+                         bool({"Date", "Cappuccino", "Americano", "Croissants"}
+                              .issubset(df.columns))),
+                        ("No invalid dates",
+                         bool(df["Date"].isna().sum() == 0)),
+                        ("Reasonable numeric values",
+                         bool(all(
+                             (df[p] >= 0).all() and (df[p] < 10_000).all()
+                             for p in PRODUCTS
+                         ))),
+                        ("No duplicate entries",
+                         bool(df.duplicated().sum() == 0)),
+                        ("Consistent product naming", True),
+                    ]
+                else:
+                    checks = [(lbl, None) for lbl in [
+                        "Required columns present",
+                        "No invalid dates",
+                        "Reasonable numeric values",
+                        "No duplicate entries",
+                        "Consistent product naming",
+                    ]]
+                for label, passed in checks:
+                    check_row(label, passed)
+
     with tab_insights:
-        if st.session_state.df is None:
-            st.info("Upload a CSV file in the **Data** tab first.")
+        if not data_loaded:
+            st.error("No data loaded.")
         else:
-            df_full = st.session_state.df.copy()
-
-            # filter bar
-            f1, f2, f3 = st.columns([2, 2, 3])
+            f1, f2, _ = st.columns([1.2, 2.8, 0.5])
             with f1:
-                sel_prod = st.selectbox(
-                    "Product",
-                    ["All Products"] + st.session_state.products,
-                    key="ins_prod",
+                sel_product = st.selectbox(
+                    "Product", ["All Products"] + PRODUCTS,
+                    label_visibility="collapsed",
                 )
             with f2:
-                sel_cat = st.selectbox(
-                    "Category",
-                    ["All Categories"] + st.session_state.categories,
-                    key="ins_cat",
-                )
-            with f3:
-                # time-range pills using buttons
-                pcols = st.columns([1, 1, 1, 3])
-                for idx, opt in enumerate(["1 Week", "4 Weeks", "8 Weeks"]):
-                    with pcols[idx]:
-                        _active = st.session_state.time_range == opt
-                        if st.button(
-                            opt,
-                            key=f"tr_{opt}",
-                            type="primary" if _active else "secondary",
-                        ):
-                            st.session_state.time_range = opt
-                            st.rerun()
-
-            time_opt = st.session_state.time_range
-            weeks_map = {"1 Week": 7, "4 Weeks": 28, "8 Weeks": 56}
-            n_days_filter = weeks_map[time_opt]
-
-            # apply product / category filter
-            df_ins = df_full.copy()
-            if sel_prod != "All Products":
-                df_ins = df_ins[df_ins["Product"] == sel_prod]
-            if sel_cat != "All Categories":
-                df_ins = df_ins[df_ins["Category"] == sel_cat]
-
-            if df_ins.empty:
-                st.warning("No data matches the selected filters.")
-            else:
-                max_date = df_ins["Date"].max()
-                df_win = df_ins[
-                    df_ins["Date"] >= max_date - pd.Timedelta(days=n_days_filter)
-                ]
-
-                # charts row
-                ch_l, ch_r = st.columns([3, 2], gap="large")
-
-                with ch_l:
-                    st.markdown(
-                        '<div class="card">'
-                        '<div class="card-title" style="font-style:italic;">Sales Over Time</div>',
-                        unsafe_allow_html=True,
-                    )
-                    daily = (
-                        df_win.groupby("Date")["Units Sold"]
-                        .sum()
-                        .reset_index()
-                        .sort_values("Date")
-                    )
-                    fig_line = go.Figure()
-                    fig_line.add_trace(
-                        go.Scatter(
-                            x=daily["Date"],
-                            y=daily["Units Sold"],
-                            mode="lines+markers",
-                            line=dict(color=PINK, width=2.5),
-                            marker=dict(size=5, color=PINK),
-                            name="Units Sold",
-                            hovertemplate=(
-                                "Date: %{x|%d %b %Y}<br>Units: %{y}<extra></extra>"
-                            ),
-                        )
-                    )
-                    fig_line.update_layout(
-                        height=320,
-                        margin=dict(l=40, r=20, t=10, b=40),
-                        xaxis=dict(showgrid=False),
-                        yaxis=dict(showgrid=True, gridcolor="#f0f0f0"),
-                        plot_bgcolor="#fff",
-                        paper_bgcolor="#fff",
-                        hovermode="x unified",
-                    )
-                    st.plotly_chart(fig_line, use_container_width=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-                with ch_r:
-                    st.markdown(
-                        '<div class="card">'
-                        '<div class="card-title" style="font-style:italic;">Top Selling Products</div>',
-                        unsafe_allow_html=True,
-                    )
-                    top5 = (
-                        df_win.groupby("Product")["Units Sold"]
-                        .sum()
-                        .sort_values(ascending=True)
-                        .tail(5)
-                        .reset_index()
-                    )
-                    fig_bar = go.Figure()
-                    fig_bar.add_trace(
-                        go.Bar(
-                            y=top5["Product"],
-                            x=top5["Units Sold"],
-                            orientation="h",
-                            marker=dict(color=PINK),
-                            hovertemplate="%{y}: %{x} units<extra></extra>",
-                        )
-                    )
-                    fig_bar.update_layout(
-                        height=320,
-                        margin=dict(l=10, r=20, t=10, b=40),
-                        xaxis=dict(showgrid=True, gridcolor="#f0f0f0"),
-                        yaxis=dict(showgrid=False),
-                        plot_bgcolor="#fff",
-                        paper_bgcolor="#fff",
-                    )
-                    st.plotly_chart(fig_bar, use_container_width=True)
-                    st.markdown("</div>", unsafe_allow_html=True)
-
-                # recent-performance table
-                st.markdown(
-                    '<div class="card">'
-                    '<div class="card-title" style="font-style:italic;">'
-                    "Recent Performance by Product</div>",
-                    unsafe_allow_html=True,
+                win_label = st.radio(
+                    "Window", ["1 Week", "4 Weeks", "12 Weeks"],
+                    horizontal=True,
+                    label_visibility="collapsed",
                 )
 
-                current_start = max_date - pd.Timedelta(days=n_days_filter)
-                prev_start = current_start - pd.Timedelta(days=n_days_filter)
+            days = {"1 Week": 7, "4 Weeks": 28, "12 Weeks": 84}[win_label]
+            df_win = df.tail(days).copy()
 
-                cur_data = df_ins[
-                    (df_ins["Date"] > current_start) & (df_ins["Date"] <= max_date)
-                ]
-                prev_data = df_ins[
-                    (df_ins["Date"] > prev_start) & (df_ins["Date"] <= current_start)
-                ]
-
-                cur_tot = cur_data.groupby(["Product", "Category"])[
-                    "Units Sold"
-                ].sum()
-                prev_tot = prev_data.groupby(["Product", "Category"])[
-                    "Units Sold"
-                ].sum()
-
-                rows = []
-                for (prod, cat), units in cur_tot.items():
-                    pu = prev_tot.get((prod, cat), 0)
-                    pct = ((units - pu) / pu * 100) if pu > 0 else 0.0
-                    rows.append(
-                        {
-                            "Product": prod,
-                            "Category": cat,
-                            "Units": int(units),
-                            "pct": pct,
-                        }
-                    )
-
-                if rows:
-                    rows.sort(key=lambda r: r["Units"], reverse=True)
-                    rows = rows[:10]
-
-                    html = (
-                        '<table class="perf-table"><tr>'
-                        "<th>Product</th><th>Category</th>"
-                        f"<th>Units (Last {time_opt})</th><th>% Change</th></tr>"
-                    )
-                    for r in rows:
-                        if r["pct"] > 0:
-                            ps = f'<span class="pct-pos">+{r["pct"]:.1f}%</span>'
-                        elif r["pct"] < 0:
-                            ps = f'<span class="pct-neg">{r["pct"]:.1f}%</span>'
-                        else:
-                            ps = '<span style="color:#888">0.0%</span>'
-                        html += (
-                            f"<tr><td>{r['Product']}</td>"
-                            f"<td>{r['Category']}</td>"
-                            f"<td>{r['Units']:,}</td>"
-                            f"<td>{ps}</td></tr>"
-                        )
-                    html += "</table>"
-                    st.markdown(html, unsafe_allow_html=True)
-                else:
-                    st.write("No data available for the selected filters.")
-
-                st.markdown("</div>", unsafe_allow_html=True)
-
-    # TAB 3 - FORECAST & EXPORT
-    with tab_forecast:
-        if st.session_state.df is None:
-            st.info("Upload a CSV file in the **Data** tab first.")
-        elif not _MODEL_OK:
-            st.error(
-                "**model.py** could not be imported. "
-                "Make sure it is present in the src/ directory and all "
-                "dependencies (prophet, pmdarima, xgboost) are installed."
-            )
-        else:
-            df_fc = st.session_state.df.copy()
-
-            # configuration card
-            st.markdown(
-                '<div class="card">'
-                '<div class="card-title">Forecast Configuration</div>',
-                unsafe_allow_html=True,
-            )
-
-            c1, c2, c3, c4 = st.columns([2, 2, 3, 1.5])
-            with c1:
-                fc_product = st.selectbox(
-                    "Product", st.session_state.products, key="fc_prod"
+            with st.container(border=True):
+                section_title("fa-chart-line", "Sales Over Time")
+                plot_cols = (
+                    PRODUCTS if sel_product == "All Products"
+                    else [sel_product]
                 )
-            with c2:
-                fc_algo = st.selectbox(
-                    "Model", sorted(VALID_ALGORITHMS), key="fc_algo"
-                )
-            with c3:
-                fc_weeks = st.slider(
-                    "Training Window",
-                    min_value=4,
-                    max_value=8,
-                    value=6,
-                    step=1,
-                    format="%d weeks",
-                    key="fc_weeks",
-                )
-            with c4:
-                st.markdown(
-                    "<div style='height:1.6rem'></div>", unsafe_allow_html=True
-                )
-                run_btn = st.button(
-                    "Run Forecast",
-                    type="primary",
-                    use_container_width=True,
-                )
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # run forecast
-            if run_btn:
-                prod_df = (
-                    df_fc[df_fc["Product"] == fc_product]
-                    .sort_values("Date")
-                    .reset_index(drop=True)
-                )
-                if prod_df.empty:
-                    st.error(f"No data for product **{fc_product}**.")
-                else:
-                    series = pd.DataFrame(
-                        {
-                            "ds": pd.to_datetime(prod_df["Date"]),
-                            "y": prod_df["Units Sold"].values,
-                        }
-                    )
-                    with st.spinner(
-                        f"Running {fc_algo} forecast for {fc_product}..."
-                    ):
-                        result = run_forecast(series, fc_algo, fc_weeks)
-
-                    if result["error"]:
-                        st.error(f"Forecast error: {result['error']}")
-                        st.session_state.forecast_result = None
-                    else:
-                        st.session_state.forecast_result = {
-                            "result": result,
-                            "product": fc_product,
-                            "algo": fc_algo,
-                            "weeks": fc_weeks,
-                        }
-                        st.rerun()
-
-            # display results
-            if st.session_state.forecast_result is not None:
-                res = st.session_state.forecast_result
-                result = res["result"]
-                fc_df = result["forecast_df"]
-                hist_df = result["history_df"]
-                metrics = result["metrics"]
-
-                # metrics row
-                m1, m2, m3, m4 = st.columns(4)
-                with m1:
-                    mv = metrics.get("mape")
-                    st.markdown(
-                        f'<div class="metric-card">'
-                        f'<div class="metric-value">'
-                        f'{f"{mv:.1f}%" if mv is not None else "N/A"}</div>'
-                        f'<div class="metric-label">MAPE</div></div>',
-                        unsafe_allow_html=True,
-                    )
-                with m2:
-                    mv = metrics.get("mae")
-                    st.markdown(
-                        f'<div class="metric-card">'
-                        f'<div class="metric-value">'
-                        f'{f"{mv:.1f}" if mv is not None else "N/A"}</div>'
-                        f'<div class="metric-label">MAE</div></div>',
-                        unsafe_allow_html=True,
-                    )
-                with m3:
-                    mv = metrics.get("rmse")
-                    st.markdown(
-                        f'<div class="metric-card">'
-                        f'<div class="metric-value">'
-                        f'{f"{mv:.1f}" if mv is not None else "N/A"}</div>'
-                        f'<div class="metric-label">RMSE</div></div>',
-                        unsafe_allow_html=True,
-                    )
-                with m4:
-                    meets = metrics.get("meets_target", False)
-                    badge = "Yes" if meets else "No"
-                    st.markdown(
-                        f'<div class="metric-card">'
-                        f'<div class="metric-value">{badge}</div>'
-                        f'<div class="metric-label">Meets 35% target</div></div>',
-                        unsafe_allow_html=True,
-                    )
-
-                st.markdown(
-                    "<div style='height:0.5rem'></div>", unsafe_allow_html=True
-                )
-
-                # forecast chart
-                st.markdown(
-                    f'<div class="card"><div class="card-title">'
-                    f'28-Day Forecast - {res["product"]} ({res["algo"]})'
-                    f"</div>",
-                    unsafe_allow_html=True,
-                )
-
-                fig_fc = go.Figure()
-
-                # historical
-                fig_fc.add_trace(
-                    go.Scatter(
-                        x=pd.to_datetime(hist_df["ds"]),
-                        y=hist_df["y"],
-                        mode="lines+markers",
-                        line=dict(color="#333", width=2),
-                        marker=dict(size=4, color="#333"),
-                        name="Historical",
-                        hovertemplate=(
-                            "Date: %{x|%d %b %Y}<br>"
-                            "Actual: %{y:.0f}<extra></extra>"
-                        ),
-                    )
-                )
-
-                # forecast (dashed pink)
-                fig_fc.add_trace(
-                    go.Scatter(
-                        x=pd.to_datetime(fc_df["ds"]),
-                        y=fc_df["yhat"],
-                        mode="lines+markers",
-                        line=dict(color=PINK, width=2.5, dash="dash"),
-                        marker=dict(size=5, color=PINK),
-                        name="Forecast",
-                        hovertemplate=(
-                            "Date: %{x|%d %b %Y}<br>"
-                            "Predicted: %{y:.0f}<extra></extra>"
-                        ),
-                    )
-                )
-
-                # dotted connecting line
-                fig_fc.add_trace(
-                    go.Scatter(
-                        x=[
-                            pd.to_datetime(hist_df["ds"].iloc[-1]),
-                            pd.to_datetime(fc_df["ds"].iloc[0]),
-                        ],
-                        y=[hist_df["y"].iloc[-1], fc_df["yhat"].iloc[0]],
-                        mode="lines",
-                        line=dict(color="#999", width=1.5, dash="dot"),
-                        showlegend=False,
-                        hoverinfo="skip",
-                    )
-                )
-
-                fig_fc.update_layout(
-                    height=380,
-                    margin=dict(l=40, r=20, t=10, b=40),
-                    xaxis=dict(showgrid=False, title="Date"),
-                    yaxis=dict(
-                        showgrid=True, gridcolor="#f0f0f0", title="Units Sold"
-                    ),
-                    plot_bgcolor="#fff",
-                    paper_bgcolor="#fff",
+                fig_line = go.Figure()
+                for col in plot_cols:
+                    fig_line.add_trace(go.Scatter(
+                        x=df_win["Date"], y=df_win[col],
+                        mode="lines+markers", name=col,
+                        line=dict(color=PRODUCT_COLOURS.get(col, PINK), width=2),
+                        marker=dict(size=4),
+                    ))
+                plotly_axes(fig_line, height=270, top=10, y_title="Units Sold")
+                fig_line.update_layout(
                     legend=dict(
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.02,
-                        xanchor="right",
-                        x=1,
+                        orientation="h", y=1.18, x=1, xanchor="right",
+                        font=dict(size=11, color="#374151"),
                     ),
                     hovermode="x unified",
                 )
-                st.plotly_chart(fig_fc, use_container_width=True)
-                st.markdown("</div>", unsafe_allow_html=True)
+                st.plotly_chart(fig_line, use_container_width=True)
 
-                # expandable data table
-                with st.expander("View forecast data table"):
-                    disp = fc_df.copy()
-                    disp["ds"] = pd.to_datetime(disp["ds"]).dt.strftime(
-                        "%d %b %Y"
-                    )
-                    disp["yhat"] = disp["yhat"].round(0).astype(int)
-                    disp.columns = ["Date", "Predicted Units"]
-                    st.dataframe(
-                        disp, use_container_width=True, hide_index=True
-                    )
+            bc, tc = st.columns([1, 1.5], gap="large")
 
-                # export card
+            with bc:
+                with st.container(border=True):
+                    section_title("fa-trophy", "Top Selling Products")
+                    totals = dict(sorted(
+                        {p: int(df_win[p].sum()) for p in PRODUCTS}.items(),
+                        key=lambda x: x[1],
+                    ))
+                    fig_bar = go.Figure(go.Bar(
+                        x=list(totals.values()),
+                        y=list(totals.keys()),
+                        orientation="h",
+                        marker_color=[PRODUCT_COLOURS.get(k, PINK) for k in totals],
+                        text=[f"{v:,}" for v in totals.values()],
+                        textposition="outside",
+                        textfont=dict(color="#374151", size=11),
+                    ))
+                    plotly_axes(fig_bar, height=190, top=5,
+                                y_title="", x_tickformat=",d")
+                    fig_bar.update_layout(
+                        margin=dict(l=0, r=65, t=5, b=0),
+                        xaxis=dict(showgrid=False, showticklabels=False),
+                        yaxis=dict(showgrid=False,
+                                   tickfont=dict(size=12, color="#374151")),
+                    )
+                    st.plotly_chart(fig_bar, use_container_width=True)
+
+            with tc:
+                with st.container(border=True):
+                    section_title("fa-table", "Recent Performance by Product")
+                    df_prev = df.tail(days * 2).head(days)
+                    rows = []
+                    for p in PRODUCTS:
+                        curr = df_win[p].sum()
+                        prev = df_prev[p].sum() if len(df_prev) else curr
+                        pct = ((curr - prev) / prev * 100) if prev else 0
+                        rows.append({
+                            "Product": p,
+                            "Category": "Coffee" if p != "Croissants" else "Pastry",
+                            f"Units ({win_label})": f"{int(curr):,}",
+                            "% Change": f"+{pct:.1f}%" if pct >= 0 else f"{pct:.1f}%",
+                        })
+                    html_table(pd.DataFrame(rows))
+
+    with tab_forecast:
+        if not data_loaded:
+            st.error("No data loaded.")
+        else:
+            with st.container(border=True):
+                section_title("fa-sliders", "Forecast Configuration")
+                c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.8, 0.8])
+                with c1:
+                    fc_product = st.selectbox("Product", PRODUCTS, key="fc_product")
+                with c2:
+                    fc_algo = st.selectbox("Model", sorted(VALID_ALGORITHMS),
+                                           key="fc_algo")
+                with c3:
+                    fc_weeks = st.slider("Training window (weeks)", 4, 8, 4,
+                                         key="fc_weeks")
+                with c4:
+                    st.markdown("<br>", unsafe_allow_html=True)
+                    run_btn = st.button("Run Forecast", type="primary",
+                                        use_container_width=True)
+
+            if run_btn:
+                series = to_series(df, fc_product)
+                with st.spinner(
+                    f"Running {fc_algo} on {fc_product} — "
+                    "this may take up to 60 seconds..."
+                ):
+                    result = run_forecast(series, fc_algo, fc_weeks)
+                st.session_state.forecast_res = result
+                st.session_state.forecast_cfg = {
+                    "product": fc_product,
+                    "algo": fc_algo,
+                    "weeks": fc_weeks,
+                }
+
+            res = st.session_state.forecast_res
+            cfg = st.session_state.forecast_cfg
+
+            if res is None:
                 st.markdown(
-                    '<div class="card"><div class="card-title">Export</div>',
+                    f"<div style='text-align:center;padding:4rem 2rem;"
+                    f"color:{TEXT_MID};'>"
+                    f"<i class='fa-solid fa-wand-magic-sparkles'"
+                    f" style='font-size:2.8rem;color:{PINK};"
+                    f"margin-bottom:0.9rem;display:block;'></i>"
+                    f"<p style='font-size:1rem;font-weight:600;"
+                    f"color:{TEXT_DARK};margin:0 0 0.35rem;'>"
+                    f"No forecast generated yet</p>"
+                    f"<p style='font-size:0.87rem;margin:0;color:{TEXT_MID};'>"
+                    f"Configure your parameters above and click "
+                    f"<strong>Run Forecast</strong></p></div>",
                     unsafe_allow_html=True,
                 )
-                e1, e2 = st.columns(2)
+            elif res["error"]:
+                st.error(f"Forecast failed: {res['error']}")
+            else:
+                m = res["metrics"]
+                hist = res["history_df"]
+                fc_df = res["forecast_df"]
 
-                with e1:
-                    export_df = fc_df.copy()
-                    export_df["ds"] = pd.to_datetime(export_df["ds"]).dt.strftime(
-                        "%Y-%m-%d"
-                    )
-                    export_df["yhat"] = export_df["yhat"].round(2)
-                    export_df.columns = ["Date", "Predicted_Units"]
-                    export_df["Product"] = res["product"]
-                    export_df["Algorithm"] = res["algo"]
-                    export_df["Training_Weeks"] = res["weeks"]
-                    export_df["MAPE"] = metrics.get("mape")
-                    csv_buf = export_df.to_csv(index=False)
+                m1, m2, m3, m4 = st.columns(4)
+                m1.metric("MAPE", f"{m['mape']:.2f}%" if m['mape'] else "—")
+                m2.metric("MAE", f"{m['mae']:.1f}" if m['mae'] else "—")
+                m3.metric("RMSE", f"{m['rmse']:.1f}" if m['rmse'] else "—")
+                m4.metric("Target Met", "Yes" if m["meets_target"] else "No")
 
-                    st.download_button(
-                        "Download Forecast CSV",
-                        data=csv_buf,
-                        file_name=(
-                            f"forecast_{res['product']}_{res['algo']}_"
-                            f"{datetime.date.today()}.csv"
+                with st.container(border=True):
+                    fig_fc = go.Figure()
+                    fig_fc.add_trace(go.Scatter(
+                        x=hist["ds"], y=hist["y"],
+                        mode="lines", name="Historical",
+                        line=dict(color="#9CA3AF", width=2),
+                    ))
+                    fig_fc.add_trace(go.Scatter(
+                        x=fc_df["ds"], y=fc_df["yhat"],
+                        mode="lines+markers", name="28-Day Forecast",
+                        line=dict(color=PINK, width=2.5, dash="dash"),
+                        marker=dict(size=5, color=PINK),
+                    ))
+                    plotly_axes(fig_fc, height=340, top=45, y_title="Units Sold")
+                    fig_fc.update_layout(
+                        title=dict(
+                            text=f"{cfg.get('product')} — {cfg.get('algo')} Forecast",
+                            font=dict(size=13, color=TEXT_DARK),
                         ),
-                        mime="text/csv",
-                        use_container_width=True,
+                        legend=dict(orientation="h", y=1.18,
+                                    font=dict(size=11, color="#374151")),
+                        hovermode="x unified",
                     )
+                    st.plotly_chart(fig_fc, use_container_width=True)
 
-                with e2:
-                    try:
-                        img = fig_fc.to_image(
-                            format="png", width=1200, height=500, scale=2
-                        )
+                with st.container(border=True):
+                    section_title("fa-download", "Export Forecast")
+                    with st.expander("Preview forecast data"):
+                        prev = fc_df.copy()
+                        prev["ds"] = prev["ds"].dt.strftime("%d %b %Y")
+                        prev["yhat"] = prev["yhat"].round(1)
+                        prev.columns = ["Date", "Forecast (units)"]
+                        html_table(prev)
+
+                    e1, e2 = st.columns(2)
+                    with e1:
                         st.download_button(
-                            "Download Forecast PNG",
-                            data=img,
+                            "Download Forecast CSV",
+                            data=fc_df.to_csv(index=False).encode(),
                             file_name=(
-                                f"forecast_{res['product']}_{res['algo']}_"
-                                f"{datetime.date.today()}.png"
+                                "forecast_"
+                                + str(cfg.get("product")) + "_"
+                                + str(cfg.get("algo")) + ".csv"
                             ),
-                            mime="image/png",
+                            mime="text/csv",
                             use_container_width=True,
                         )
-                    except Exception:
-                        st.caption(
-                            "PNG export requires the **kaleido** package. "
-                            "Install with: pip install kaleido"
+                    with e2:
+                        summary = "\n".join([
+                            f"Product:          {cfg.get('product')}",
+                            f"Algorithm:        {cfg.get('algo')}",
+                            f"Training window:  {cfg.get('weeks')} weeks",
+                            f"MAPE:             {m['mape']}%",
+                            f"MAE:              {m['mae']}",
+                            f"RMSE:             {m['rmse']}",
+                            f"Meets target:     {m['meets_target']}",
+                            "", "Date,Forecast",
+                        ] + [
+                            f"{r.ds.date()},{r.yhat:.1f}"
+                            for _, r in fc_df.iterrows()
+                        ])
+                        st.download_button(
+                            "Download Full Report TXT",
+                            data=summary.encode(),
+                            file_name=(
+                                "report_"
+                                + str(cfg.get("product")) + "_"
+                                + str(cfg.get("algo")) + ".txt"
+                            ),
+                            mime="text/plain",
+                            use_container_width=True,
                         )
 
-                st.markdown("</div>", unsafe_allow_html=True)
 
+elif page == "Reports":
+    page_header(
+        "Reports",
+        "Generate and download custom reports for your café",
+    )
+
+    r1, r2 = st.columns([1.3, 1], gap="large")
+
+    with r1:
+        with st.container(border=True):
+            section_title("fa-file-csv", "Ready Reports")
+            if data_loaded:
+                for title, desc, data_bytes, fname in [
+                    (
+                        "Sales Summary",
+                        "Last 30 days breakdown by product",
+                        df.tail(30).to_csv(index=False).encode(),
+                        "sales_summary.csv",
+                    ),
+                    (
+                        "Performance Report",
+                        "Full dataset performance metrics",
+                        df.to_csv(index=False).encode(),
+                        "performance_report.csv",
+                    ),
+                ]:
+                    c1, c2 = st.columns([3, 1])
+                    c1.markdown(
+                        f"<p style='margin:0;font-weight:600;font-size:0.9rem;"
+                        f"color:{TEXT_DARK};'>{title}</p>"
+                        f"<p style='margin:0;font-size:0.8rem;"
+                        f"color:{TEXT_MID};'>{desc}</p>",
+                        unsafe_allow_html=True,
+                    )
+                    c2.download_button(
+                        "Download", data=data_bytes,
+                        file_name=fname, mime="text/csv",
+                        key=f"ready_{title}",
+                        use_container_width=True,
+                    )
+                    st.divider()
             else:
-                # placeholder when no forecast has been run
-                st.markdown(
-                    """
-                    <div class="card">
-                        <div class="forecast-empty">
-                            <div style="font-size:1.5rem; color:#ccc;">--</div>
-                            <div style="font-size:1.1rem; font-weight:600;
-                                        color:#999; margin-top:0.5rem;">
-                                No forecast generated yet
-                            </div>
-                            <div style="color:#bbb; font-size:0.9rem;
-                                        margin-top:0.25rem;">
-                                Configure your parameters above and click
-                                &ldquo;Run Forecast&rdquo;
-                            </div>
-                        </div>
-                    </div>
-                    """,
+                st.warning("No data loaded.")
+
+        st.markdown("")
+
+        with st.container(border=True):
+            section_title("fa-screwdriver-wrench", "Custom Report Generator")
+            cc1, cc2 = st.columns(2)
+            with cc1:
+                r_type = st.selectbox(
+                    "Report type",
+                    ["Sales Analysis", "Product Breakdown", "Full Export"],
+                )
+            with cc2:
+                r_range = st.selectbox(
+                    "Date range",
+                    ["Last 7 days", "Last 30 days", "Last 90 days", "All data"],
+                )
+            if st.button("Generate Custom Report", type="primary"):
+                if data_loaded:
+                    n_rows = {
+                        "Last 7 days": 7,
+                        "Last 30 days": 30,
+                        "Last 90 days": 90,
+                    }.get(r_range, len(df))
+                    st.download_button(
+                        f"Download {r_type} ({r_range})",
+                        data=df.tail(n_rows).to_csv(index=False).encode(),
+                        file_name="custom_" + r_type.lower().replace(" ", "_") + ".csv",
+                        mime="text/csv",
+                    )
+                else:
+                    st.error("No data loaded.")
+
+    with r2:
+        with st.container(border=True):
+            section_title("fa-clock-rotate-left", "Recent Reports")
+            for name, date, fmt in [
+                ("January Sales Summary",      "2026-02-01", "CSV"),
+                ("Weekly Performance Report",  "2026-01-28", "CSV"),
+                ("Product Analysis Q4 2025",   "2026-01-15", "CSV"),
+                ("Forecast Report - December", "2025-12-28", "TXT"),
+            ]:
+                c1, c2 = st.columns([3, 1])
+                c1.markdown(
+                    f"<p style='margin:0;font-weight:600;font-size:0.9rem;"
+                    f"color:{TEXT_DARK};'>{name}</p>"
+                    f"<p style='margin:0;font-size:0.8rem;color:{TEXT_MID};'>"
+                    f"{date}</p>",
                     unsafe_allow_html=True,
                 )
+                c2.markdown(
+                    "<div style='padding-top:0.3rem;'>"
+                    "<span style='background:#F3F4F6;color:#374151;"
+                    "padding:0.2rem 0.6rem;border-radius:20px;"
+                    "font-size:0.76rem;font-weight:600;'>"
+                    + fmt + "</span></div>",
+                    unsafe_allow_html=True,
+                )
+                st.divider()
 
 
-# PAGE: REPORTS (placeholder)
-elif st.session_state.page == "Reports":
-    st.markdown(
-        '<p class="main-title">Reports</p>', unsafe_allow_html=True
+elif page == "Settings":
+    page_header(
+        "Settings",
+        "Manage your café dashboard preferences and configuration",
     )
-    st.info(
-        "Reports will be generated here based on forecasting history. "
-        "Upload data and run forecasts from the **Dashboard** to populate reports."
-    )
 
-# PAGE: SETTINGS (placeholder)
-elif st.session_state.page == "Settings":
-    st.markdown(
-        '<p class="main-title">Settings</p>', unsafe_allow_html=True
-    )
+    s1, s2 = st.columns(2, gap="large")
 
-    st.markdown(
-        '<div class="card"><div class="card-title">Application Settings</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        f"""
-**Dashboard Version:** 1.0.0
+    with s1:
+        with st.container(border=True):
+            section_title("fa-user", "Profile Settings")
+            st.text_input("Full Name", value="Sarah Johnson", key="s_name")
+            st.text_input("Email", value="sarah@bristolpink.co.uk", key="s_email")
+            st.text_input("Role", value="Café Manager", disabled=True)
+            if st.button("Save Changes", type="primary"):
+                st.success("Profile saved successfully.")
 
-**Supported Algorithms:** {', '.join(sorted(VALID_ALGORITHMS))}
+        st.markdown("")
 
-**Max Training Window:** 8 weeks
+        with st.container(border=True):
+            section_title("fa-bell", "Notifications")
+            ns = st.session_state.notifications
+            ns["forecast_alerts"] = st.checkbox(
+                "Forecast Alerts — get notified when a new forecast is ready",
+                value=ns["forecast_alerts"],
+            )
+            ns["low_stock"] = st.checkbox(
+                "Low Stock Warnings — alert when predicted demand may exceed supply",
+                value=ns["low_stock"],
+            )
+            ns["weekly_reports"] = st.checkbox(
+                "Weekly Reports — receive an automated summary every Monday",
+                value=ns["weekly_reports"],
+            )
+            ns["upload_status"] = st.checkbox(
+                "Upload Status — confirm when a data file has been processed",
+                value=ns["upload_status"],
+            )
 
-**Forecast Horizon:** 28 days
-        """
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+    with s2:
+        with st.container(border=True):
+            section_title("fa-location-dot", "Locations")
+            for loc in ["Bristol Centre", "Bristol Harbour", "Clifton Village"]:
+                lc1, lc2 = st.columns([3, 1])
+                lc1.markdown(
+                    f"<p style='margin:0.2rem 0;font-weight:600;font-size:0.9rem;"
+                    f"color:{TEXT_DARK};'>{loc} &nbsp;"
+                    f"<span style='background:#DCFCE7;color:#15803D;"
+                    f"padding:0.15rem 0.55rem;border-radius:20px;"
+                    f"font-size:0.74rem;font-weight:600;'>Active</span></p>",
+                    unsafe_allow_html=True,
+                )
+                lc2.button("Edit", key=f"loc_{loc}")
+                st.divider()
+            st.button("Add New Location")
 
-    st.markdown(
-        '<div class="card"><div class="card-title">Accessibility</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        """
-- All charts include hover tooltips for screen readers
-- High contrast colour scheme (WCAG 2.1 AA)
-- No red-green only colour distinctions
-- Tab navigation supported throughout
-        """
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("")
+
+        with st.container(border=True):
+            section_title("fa-shield-halved", "Data & Privacy")
+            dp1, dp2 = st.columns(2)
+            if dp1.button("Export All Data", use_container_width=True):
+                if data_loaded:
+                    st.download_button(
+                        "Download all_data.csv",
+                        data=df.to_csv(index=False).encode(),
+                        file_name="all_data.csv",
+                        mime="text/csv",
+                    )
+            dp2.button("Change Password", use_container_width=True)
+            st.markdown("")
+            st.selectbox(
+                "Data Retention",
+                [
+                    "Keep data for 1 year",
+                    "Keep data for 2 years",
+                    "Keep indefinitely",
+                ],
+            )
