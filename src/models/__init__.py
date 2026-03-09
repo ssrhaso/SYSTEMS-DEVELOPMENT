@@ -4,7 +4,7 @@ from .prediction import Prediction
 from .sale_record import SaleRecord
 from .csv_reader import CSVReader
 from .data_manager import DataManager
-from .i_dashboard_view import IDashboardView
+from .dashboard_view import IDashboardView
 from .table_view import TableView
 from .graph_view import GraphView
 from .main_dashboard import MainDashboard, ViewType

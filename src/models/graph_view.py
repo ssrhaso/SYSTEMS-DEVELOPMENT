@@ -2,7 +2,7 @@ from datetime import date
 
 import plotly.graph_objects as go
 
-from .i_dashboard_view import IDashboardView
+from .dashboard_view import IDashboardView
 from .prediction import Prediction
 from .sale_record import SaleRecord
 

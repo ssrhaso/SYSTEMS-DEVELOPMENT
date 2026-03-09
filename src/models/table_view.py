@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from .i_dashboard_view import IDashboardView
+from .dashboard_view import IDashboardView
 from .sale_record import SaleRecord
 
 

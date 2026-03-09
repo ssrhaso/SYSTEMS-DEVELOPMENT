@@ -2,7 +2,7 @@ from enum import Enum
 
 import streamlit as st
 
-from .i_dashboard_view import IDashboardView
+from .dashboard_view import IDashboardView
 
 
 class ViewType(Enum):
