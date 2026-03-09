@@ -422,31 +422,7 @@ if data_loaded:
 
 
 def html_table(data: pd.DataFrame):
-    header_cells = "".join(
-        f"<th style='background:#F3F4F6;color:#111827;font-weight:600;"
-        f"padding:0.55rem 0.85rem;text-align:left;font-size:0.93rem;"
-        f"border-bottom:2px solid #E5E7EB;white-space:nowrap;'>{col}</th>"
-        for col in data.columns
-    )
-    rows_html = ""
-    for i, row in enumerate(data.itertuples(index=False)):
-        bg = "#FFFFFF" if i % 2 == 0 else "#F9FAFB"
-        cells = "".join(
-            f"<td style='padding:0.48rem 0.85rem;color:#111827;"
-            f"font-size:0.93rem;border-bottom:1px solid #F3F4F6;"
-            f"white-space:nowrap;'>{v}</td>"
-            for v in row
-        )
-        rows_html += f"<tr style='background:{bg};'>{cells}</tr>"
-    st.markdown(
-        f"<div style='overflow-x:auto;border:1px solid #E5E7EB;"
-        f"border-radius:8px;margin-top:0.4rem;'>"
-        f"<table style='width:100%;border-collapse:collapse;'>"
-        f"<thead><tr>{header_cells}</tr></thead>"
-        f"<tbody>{rows_html}</tbody>"
-        f"</table></div>",
-        unsafe_allow_html=True,
-    )
+    controller.table_view.render_dataframe(data)
 
 
 def pink_info(msg: str):
@@ -825,18 +801,30 @@ if page == "Dashboard":
                 m5.metric("Accuracy", f"{accuracy:.1f}%" if accuracy else "—")
 
                 with st.container(border=True):
-                    fig_fc = go.Figure()
-                    fig_fc.add_trace(go.Scatter(
-                        x=hist["ds"], y=hist["y"],
-                        mode="lines", name="Historical",
-                        line=dict(color="#9CA3AF", width=2),
-                    ))
-                    fig_fc.add_trace(go.Scatter(
-                        x=fc_df["ds"], y=fc_df["yhat"],
-                        mode="lines+markers", name="28-Day Forecast",
-                        line=dict(color="#111827", width=2.5, dash="dash"),
-                        marker=dict(size=5, color="#111827"),
-                    ))
+                    product_obj = Product(
+                        cfg.get("product", ""),
+                        Category.COFFEE if cfg.get("product") != "Croissants" else Category.PASTRY,
+                    )
+                    history_records = [
+                        SaleRecord(
+                            sale_date=row["ds"].date() if hasattr(row["ds"], "date") else row["ds"],
+                            bakery_location="Bristol Centre",
+                            quantity_sold=int(row["y"]),
+                            product=product_obj,
+                        )
+                        for _, row in hist.iterrows()
+                    ]
+                    prediction_records = [
+                        Prediction(
+                            product=product_obj,
+                            predicted_date=row["ds"].date() if hasattr(row["ds"], "date") else row["ds"],
+                            predicted_quantity=float(row["yhat"]),
+                        )
+                        for _, row in fc_df.iterrows()
+                    ]
+                    fig_fc = controller.graph_view.plot_history_and_prediction(
+                        history_records, prediction_records
+                    )
                     plotly_axes(fig_fc, height=340, top=65, y_title="Units Sold")
                     fig_fc.update_layout(
                         title=dict(
