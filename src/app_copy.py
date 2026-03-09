@@ -45,9 +45,9 @@ TEXT_MID = "#6B7280"
 BORDER = "#E5E7EB"
 
 PRODUCT_COLOURS = {
-    "Cappuccino": "#000000",
-    "Americano": "#E8547A",
-    "Croissants": "#F59E0B",
+    "Cappuccino": "#E8547A",
+    "Americano": "#BE185D",
+    "Croissants": "#8B5CF6",
 }
 
 PRODUCTS = ["Cappuccino", "Americano", "Croissants"]
@@ -74,8 +74,6 @@ st.markdown("""<style>
 html, body, [class*="css"] {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
     color: #111827 !important;
-    font-weight: 500 !important;
-    font-size: 16px !important;
 }
 
 .stApp { background-color: #F8F9FA !important; }
@@ -139,13 +137,6 @@ input[type="radio"] { accent-color: #E8547A !important; }
     border-radius: 8px !important;
     color: #111827 !important;
 }
-[data-testid="stSelectbox"] svg {
-    color: #111827 !important;
-    fill: #111827 !important;
-    opacity: 1 !important;
-    display: inline-block !important;
-    visibility: visible !important;
-}
 
 [data-testid="stSlider"] label p { color: #111827 !important; }
 [data-testid="stSlider"] [role="slider"] { background: #E8547A !important; }
@@ -182,7 +173,7 @@ input[type="radio"] { accent-color: #E8547A !important; }
     color: #111827 !important;
     border: 1px solid #E5E7EB !important;
     border-radius: 8px !important;
-    font-size: 0.96rem !important;
+    font-size: 0.86rem !important;
     font-weight: 500 !important;
     transition: background 0.15s, border-color 0.15s, color 0.15s !important;
     box-shadow: none !important;
@@ -214,7 +205,7 @@ button[data-testid="baseButton-primary"]:hover {
     border: 1px solid #E5E7EB !important;
     border-radius: 8px !important;
     font-weight: 500 !important;
-    font-size: 0.96rem !important;
+    font-size: 0.86rem !important;
     transition: background 0.15s, border-color 0.15s, color 0.15s !important;
     box-shadow: none !important;
 }
@@ -248,31 +239,31 @@ section[data-testid="stSidebar"] hr {
 
 [data-testid="stSidebar"] .stButton > button {
     background: transparent !important;
-    color: rgba(255,255,255,0.80) !important;
-    border: none !important;
+    color: rgba(255,255,255,0.72) !important;
+    border: 1px solid rgba(255,255,255,0.10) !important;
     border-radius: 8px !important;
     width: 100% !important;
     text-align: left !important;
-    padding: 0.65rem 1rem !important;
+    padding: 0.62rem 1rem !important;
     min-height: 2.6rem !important;
-    font-size: 1.02rem !important;
+    font-size: 0.91rem !important;
     font-weight: 500 !important;
-    margin-bottom: 2px !important;
+    margin-bottom: 3px !important;
     box-shadow: none !important;
     justify-content: flex-start !important;
-    transition: background 0.15s, color 0.15s !important;
+    transition: background 0.15s, color 0.15s, border-color 0.15s !important;
 }
 [data-testid="stSidebar"] .stButton > button:hover {
-    background: rgba(255,255,255,0.08) !important;
-    color: #FFFFFF !important;
-    border: none !important;
+    background: rgba(232,84,122,0.18) !important;
+    color: #E8547A !important;
+    border-color: #E8547A !important;
 }
 [data-testid="stSidebar"] .stButton > button:disabled {
-    background: #E8547A !important;
-    color: #FFFFFF !important;
-    border: none !important;
+    background: rgba(232,84,122,0.18) !important;
+    color: #E8547A !important;
+    border: 1px solid #E8547A !important;
     border-radius: 8px !important;
-    font-weight: 700 !important;
+    font-weight: 600 !important;
     opacity: 1 !important;
     cursor: default !important;
 }
@@ -291,7 +282,7 @@ section[data-testid="stSidebar"] hr {
     box-shadow: 0 1px 4px rgba(0,0,0,0.05) !important;
 }
 .stTabs [data-baseweb="tab"] {
-    font-size: 0.97rem !important;
+    font-size: 0.88rem !important;
     font-weight: 500 !important;
     color: #6B7280 !important;
     padding: 0.85rem 1.4rem !important;
@@ -334,12 +325,12 @@ section[data-testid="stSidebar"] hr {
     box-shadow: 0 4px 12px rgba(232,84,122,0.12) !important;
 }
 [data-testid="stMetricLabel"] p {
-    font-size: 0.88rem !important;
+    font-size: 0.78rem !important;
     color: #6B7280 !important;
     font-weight: 500 !important;
 }
 [data-testid="stMetricValue"] {
-    font-size: 1.65rem !important;
+    font-size: 1.5rem !important;
     font-weight: 700 !important;
     color: #111827 !important;
 }
@@ -430,7 +421,7 @@ def pink_info(msg: str):
         f"<div style='background:#FDE8EE;border:1px solid #E8547A;"
         f"border-left:4px solid #E8547A;border-radius:8px;"
         f"padding:0.7rem 1rem;margin:0.4rem 0;'>"
-        f"<span style='color:#7C1D36;font-size:0.975rem;'>"
+        f"<span style='color:#7C1D36;font-size:0.875rem;'>"
         f"<i class='fa-solid fa-circle-info' style='color:#E8547A;"
         f"margin-right:0.4rem;'></i>{msg}</span></div>",
         unsafe_allow_html=True,
@@ -439,10 +430,10 @@ def pink_info(msg: str):
 
 def section_title(fa_icon: str, text: str):
     st.markdown(
-        f"<p style='font-weight:600;font-size:1.03rem;color:{TEXT_DARK};"
+        f"<p style='font-weight:600;font-size:0.93rem;color:{TEXT_DARK};"
         f"margin:0 0 0.8rem 0;display:flex;align-items:center;gap:0.5rem;'>"
         f"<i class='fa-solid {fa_icon}' style='color:{PINK};"
-        f"font-size:0.95rem;'></i> {text}</p>",
+        f"font-size:0.85rem;'></i> {text}</p>",
         unsafe_allow_html=True,
     )
 
@@ -453,7 +444,7 @@ def badge_html(text: str, green: bool = True) -> str:
     return (
         f"<span style='background:{bg};color:{fg};"
         f"padding:0.2rem 0.75rem;border-radius:20px;"
-        f"font-size:0.88rem;font-weight:600;'>{text}</span>"
+        f"font-size:0.78rem;font-weight:600;'>{text}</span>"
     )
 
 
@@ -461,9 +452,9 @@ def page_header(title: str, subtitle: str):
     st.markdown(
         f"<div style='padding-bottom:1rem;margin-bottom:1.4rem;"
         f"border-bottom:1px solid {BORDER};'>"
-        f"<h2 style='font-size:1.5rem;font-weight:700;"
+        f"<h2 style='font-size:1.35rem;font-weight:700;"
         f"color:{TEXT_DARK};margin:0 0 0.2rem 0;'>{title}</h2>"
-        f"<p style='font-size:0.97rem;color:{TEXT_MID};margin:0;'>"
+        f"<p style='font-size:0.87rem;color:{TEXT_MID};margin:0;'>"
         f"{subtitle}</p></div>",
         unsafe_allow_html=True,
     )
@@ -478,9 +469,9 @@ def check_row(label: str, passed):
         icon, clr = "fa-circle", "#D1D5DB"
     st.markdown(
         f"<div style='display:flex;align-items:center;gap:0.5rem;"
-        f"padding:0.3rem 0;font-size:0.96rem;color:{TEXT_DARK};'>"
+        f"padding:0.3rem 0;font-size:0.86rem;color:{TEXT_DARK};'>"
         f"<i class='fa-solid {icon}' style='color:{clr};"
-        f"font-size:0.94rem;'></i>"
+        f"font-size:0.84rem;'></i>"
         f"<span>{label}</span></div>",
         unsafe_allow_html=True,
     )
@@ -511,24 +502,15 @@ def plotly_axes(fig, height=270, top=10, y_title="Units Sold",
 
 with st.sidebar:
     st.markdown(
-        "<div style='padding:1.1rem 0 1rem 0;display:flex;align-items:center;gap:0.7rem;'>"
-        "<div style='background:#C0395E;border-radius:10px;width:40px;height:40px;"
-        "display:flex;align-items:center;justify-content:center;flex-shrink:0;'>"
-        "<i class='fa-solid fa-mug-hot' style='color:#FFFFFF;font-size:1.1rem;'></i>"
-        "</div>"
-        "<div>"
-        "<div style='font-size:1.15rem;font-weight:800;letter-spacing:-0.2px;"
-        "color:#FFFFFF;line-height:1.2;'>Bristol Pink Cafe</div>"
-        "<div style='font-size:0.82rem;color:rgba(255,255,255,0.45);"
-        "margin-top:0.1rem;font-weight:400;'>Analytics</div>"
-        "</div>"
+        "<div style='padding:0.8rem 0 0.5rem 0;'>"
+        "<div style='font-size:1.35rem;font-weight:800;"
+        "letter-spacing:-0.3px;color:#FFFFFF;'>Bristol Pink</div>"
+        "<div style='font-size:0.76rem;color:rgba(255,255,255,0.45);"
+        "margin-top:0.15rem;'>Café Analytics</div>"
         "</div>",
         unsafe_allow_html=True,
     )
-    st.markdown(
-        "<div style='border-top:1px solid rgba(255,255,255,0.10);margin-bottom:0.6rem;'></div>",
-        unsafe_allow_html=True,
-    )
+    st.divider()
 
     for label, icon in NAV_ITEMS:
         is_active = st.session_state.page == label
@@ -537,6 +519,13 @@ with st.sidebar:
             st.session_state.page = label
             st.session_state.forecast_res = None
             st.rerun()
+
+    st.divider()
+    st.markdown(
+        "<div style='font-size:0.72rem;color:rgba(255,255,255,0.35);"
+        "padding:0.1rem 0;'>Bristol Centre</div>",
+        unsafe_allow_html=True,
+    )
 
 page = st.session_state.page
 
@@ -777,10 +766,10 @@ if page == "Dashboard":
                     f"<i class='fa-solid fa-wand-magic-sparkles'"
                     f" style='font-size:2.8rem;color:{PINK};"
                     f"margin-bottom:0.9rem;display:block;'></i>"
-                    f"<p style='font-size:1.1rem;font-weight:600;"
+                    f"<p style='font-size:1rem;font-weight:600;"
                     f"color:{TEXT_DARK};margin:0 0 0.35rem;'>"
                     f"No forecast generated yet</p>"
-                    f"<p style='font-size:0.97rem;margin:0;color:{TEXT_MID};'>"
+                    f"<p style='font-size:0.87rem;margin:0;color:{TEXT_MID};'>"
                     f"Configure your parameters above and click "
                     f"<strong>Run Forecast</strong></p></div>",
                     unsafe_allow_html=True,
@@ -917,9 +906,9 @@ elif page == "Reports":
                 ]:
                     c1, c2 = st.columns([3, 1])
                     c1.markdown(
-                        f"<p style='margin:0;font-weight:600;font-size:1.0rem;"
+                        f"<p style='margin:0;font-weight:600;font-size:0.9rem;"
                         f"color:{TEXT_DARK};'>{title}</p>"
-                        f"<p style='margin:0;font-size:0.9rem;"
+                        f"<p style='margin:0;font-size:0.8rem;"
                         f"color:{TEXT_MID};'>{desc}</p>",
                         unsafe_allow_html=True,
                     )
@@ -975,9 +964,9 @@ elif page == "Reports":
             ]:
                 c1, c2 = st.columns([3, 1])
                 c1.markdown(
-                    f"<p style='margin:0;font-weight:600;font-size:1.0rem;"
+                    f"<p style='margin:0;font-weight:600;font-size:0.9rem;"
                     f"color:{TEXT_DARK};'>{name}</p>"
-                    f"<p style='margin:0;font-size:0.9rem;color:{TEXT_MID};'>"
+                    f"<p style='margin:0;font-size:0.8rem;color:{TEXT_MID};'>"
                     f"{date}</p>",
                     unsafe_allow_html=True,
                 )
@@ -985,7 +974,7 @@ elif page == "Reports":
                     "<div style='padding-top:0.3rem;'>"
                     "<span style='background:#F3F4F6;color:#374151;"
                     "padding:0.2rem 0.6rem;border-radius:20px;"
-                    "font-size:0.86rem;font-weight:600;'>"
+                    "font-size:0.76rem;font-weight:600;'>"
                     + fmt + "</span></div>",
                     unsafe_allow_html=True,
                 )
@@ -1075,15 +1064,15 @@ elif page == "Settings":
                     status_badge = (
                         "<span style='background:#DCFCE7;color:#15803D;"
                         "padding:0.15rem 0.55rem;border-radius:20px;"
-                        "font-size:0.84rem;font-weight:600;'>Active</span>"
+                        "font-size:0.74rem;font-weight:600;'>Active</span>"
                         if loc_active
                         else "<span style='background:#F3F4F6;color:#6B7280;"
                         "padding:0.15rem 0.55rem;border-radius:20px;"
-                        "font-size:0.84rem;font-weight:600;'>Inactive</span>"
+                        "font-size:0.74rem;font-weight:600;'>Inactive</span>"
                     )
                     lc1.markdown(
                         f"<p style='margin:0.2rem 0;font-weight:600;"
-                        f"font-size:1.0rem;color:{TEXT_DARK};'>"
+                        f"font-size:0.9rem;color:{TEXT_DARK};'>"
                         f"{loc_name} &nbsp;{status_badge}</p>",
                         unsafe_allow_html=True,
                     )
