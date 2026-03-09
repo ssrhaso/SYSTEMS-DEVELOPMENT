@@ -1,9 +1,11 @@
 from datetime import datetime
 
-from csv_reader import CSVReader
-from category import Category
-from product import Product
-from sale_record import SaleRecord
+import pandas as pd
+
+from .csv_reader import CSVReader
+from .category import Category
+from .product import Product
+from .sale_record import SaleRecord
 
 
 class DataManager:
@@ -77,3 +79,34 @@ class DataManager:
             record for record in self.all_sales
             if record.product.name == product_name
         ]
+
+    def load_from_dataframe(self, df: pd.DataFrame) -> None:
+        self.all_sales = []
+        for _, row in df.iterrows():
+            sale_date = row["Date"].date() if hasattr(row["Date"], "date") else row["Date"]
+            for col in df.columns:
+                if col == "Date":
+                    continue
+                category = Category.PASTRY if col == "Croissants" else Category.COFFEE
+                product = Product(name=col, category=category)
+                record = SaleRecord(
+                    sale_date=sale_date,
+                    bakery_location="Bristol Centre",
+                    quantity_sold=int(row[col]),
+                    product=product,
+                )
+                self.all_sales.append(record)
+
+    def to_dataframe(self) -> pd.DataFrame:
+        if not self.all_sales:
+            return pd.DataFrame()
+        rows: dict = {}
+        for record in self.all_sales:
+            d = record.date
+            if d not in rows:
+                rows[d] = {"Date": d}
+            rows[d][record.product.name] = record.quantity_sold
+        return pd.DataFrame(list(rows.values())).sort_values("Date").reset_index(drop=True)
+
+    def get_product_names(self) -> list[str]:
+        return list({record.product.name for record in self.all_sales})

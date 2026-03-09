@@ -1,6 +1,8 @@
 from enum import Enum
 
-from i_dashboard_view import IDashboardView
+import streamlit as st
+
+from .i_dashboard_view import IDashboardView
 
 
 class ViewType(Enum):
@@ -26,4 +28,4 @@ class MainDashboard:
         self._view = view
 
     def show_error_message(self, msg: str) -> None:
-        print(f"[ERROR] {msg}")
+        st.error(msg)

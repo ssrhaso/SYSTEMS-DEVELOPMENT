@@ -1,10 +1,13 @@
-from product import Product
-from sale_record import SaleRecord
+from .product import Product
+from .sale_record import SaleRecord
 
 
 class SalesAnalyzer:
-    def get_sales_fluctuation(self, product: Product, weeks: int) -> dict:
-        return {}
+    def get_sales_fluctuation(self, product: Product, weeks: int, sales: list[SaleRecord] | None = None) -> dict:
+        if sales is None:
+            return {}
+        product_sales = [s for s in sales if s.product.name == product.name]
+        return self._calculate_fluctuation(product_sales, weeks)
 
     def _calculate_fluctuation(self, sales: list[SaleRecord], weeks: int) -> dict:
         weekly_totals: dict[int, int] = {}
