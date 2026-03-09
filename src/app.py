@@ -366,6 +366,13 @@ for _k, _v in [
         "weekly_reports": False,
         "upload_status": True,
     }),
+    ("locations", [
+        {"name": "Bristol Centre", "active": True},
+        {"name": "Bristol Harbour", "active": True},
+        {"name": "Clifton Village", "active": True},
+    ]),
+    ("editing_loc", None),
+    ("adding_loc", False),
 ]:
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -788,14 +795,17 @@ if page == "Dashboard":
                         line=dict(color=PINK, width=2.5, dash="dash"),
                         marker=dict(size=5, color=PINK),
                     ))
-                    plotly_axes(fig_fc, height=340, top=45, y_title="Units Sold")
+                    plotly_axes(fig_fc, height=340, top=65, y_title="Units Sold")
                     fig_fc.update_layout(
                         title=dict(
                             text=f"{cfg.get('product')} — {cfg.get('algo')} Forecast",
                             font=dict(size=13, color=TEXT_DARK),
+                            x=0, xanchor="left", y=0.98, yanchor="top",
                         ),
-                        legend=dict(orientation="h", y=1.18,
-                                    font=dict(size=11, color="#374151")),
+                        legend=dict(
+                            orientation="h", y=1.22, x=1, xanchor="right",
+                            font=dict(size=11, color="#374151"),
+                        ),
                         hovermode="x unified",
                     )
                     st.plotly_chart(fig_fc, use_container_width=True)
@@ -994,19 +1004,85 @@ elif page == "Settings":
     with s2:
         with st.container(border=True):
             section_title("fa-location-dot", "Locations")
-            for loc in ["Bristol Centre", "Bristol Harbour", "Clifton Village"]:
-                lc1, lc2 = st.columns([3, 1])
-                lc1.markdown(
-                    f"<p style='margin:0.2rem 0;font-weight:600;font-size:0.9rem;"
-                    f"color:{TEXT_DARK};'>{loc} &nbsp;"
-                    f"<span style='background:#DCFCE7;color:#15803D;"
-                    f"padding:0.15rem 0.55rem;border-radius:20px;"
-                    f"font-size:0.74rem;font-weight:600;'>Active</span></p>",
-                    unsafe_allow_html=True,
-                )
-                lc2.button("Edit", key=f"loc_{loc}")
+            for idx, loc in enumerate(st.session_state.locations):
+                loc_name = loc["name"]
+                loc_active = loc["active"]
+
+                if st.session_state.editing_loc == idx:
+                    ec1, ec2 = st.columns([3, 1])
+                    with ec1:
+                        new_name = st.text_input(
+                            "Location name", value=loc_name,
+                            key=f"edit_name_{idx}",
+                            label_visibility="collapsed",
+                        )
+                        new_active = st.checkbox(
+                            "Active", value=loc_active,
+                            key=f"edit_active_{idx}",
+                        )
+                    with ec2:
+                        if st.button("Save", key=f"save_loc_{idx}",
+                                     type="primary"):
+                            new_name_stripped = new_name.strip()
+                            if new_name_stripped:
+                                st.session_state.locations[idx]["name"] = (
+                                    new_name_stripped
+                                )
+                                st.session_state.locations[idx]["active"] = (
+                                    new_active
+                                )
+                            st.session_state.editing_loc = None
+                            st.rerun()
+                        if st.button("Cancel", key=f"cancel_loc_{idx}"):
+                            st.session_state.editing_loc = None
+                            st.rerun()
+                        if st.button("Delete", key=f"del_loc_{idx}"):
+                            st.session_state.locations.pop(idx)
+                            st.session_state.editing_loc = None
+                            st.rerun()
+                else:
+                    lc1, lc2 = st.columns([3, 1])
+                    status_badge = (
+                        "<span style='background:#DCFCE7;color:#15803D;"
+                        "padding:0.15rem 0.55rem;border-radius:20px;"
+                        "font-size:0.74rem;font-weight:600;'>Active</span>"
+                        if loc_active
+                        else "<span style='background:#F3F4F6;color:#6B7280;"
+                        "padding:0.15rem 0.55rem;border-radius:20px;"
+                        "font-size:0.74rem;font-weight:600;'>Inactive</span>"
+                    )
+                    lc1.markdown(
+                        f"<p style='margin:0.2rem 0;font-weight:600;"
+                        f"font-size:0.9rem;color:{TEXT_DARK};'>"
+                        f"{loc_name} &nbsp;{status_badge}</p>",
+                        unsafe_allow_html=True,
+                    )
+                    if lc2.button("Edit", key=f"loc_{idx}"):
+                        st.session_state.editing_loc = idx
+                        st.rerun()
                 st.divider()
-            st.button("Add New Location")
+
+            if st.session_state.adding_loc:
+                new_loc_name = st.text_input(
+                    "New location name", key="new_loc_name",
+                    placeholder="Enter location name",
+                )
+                ab1, ab2 = st.columns(2)
+                if ab1.button("Add", type="primary", key="confirm_add_loc"):
+                    new_loc_stripped = new_loc_name.strip()
+                    if new_loc_stripped:
+                        st.session_state.locations.append(
+                            {"name": new_loc_stripped, "active": True}
+                        )
+                    st.session_state.adding_loc = False
+                    st.rerun()
+                if ab2.button("Cancel", key="cancel_add_loc"):
+                    st.session_state.adding_loc = False
+                    st.rerun()
+            else:
+                if st.button("Add New Location"):
+                    st.session_state.adding_loc = True
+                    st.rerun()
 
         st.markdown("")
 
