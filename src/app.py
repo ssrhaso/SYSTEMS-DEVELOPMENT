@@ -10,7 +10,7 @@ import streamlit as st
 warnings.filterwarnings("ignore")
 
 sys.path.insert(0, os.path.dirname(__file__))
-from preprocessor import load_all, to_series
+from preprocessor import load_all, to_series, _read_coffee
 from model import run_forecast, VALID_ALGORITHMS
 from models import (
     Category,
@@ -426,6 +426,9 @@ if st.session_state.get("custom_df") is not None:
     data_loaded = True
     data_error = None
 
+# Determine which products are actually present in the loaded data
+available_products = [p for p in PRODUCTS if p in df.columns] if data_loaded else []
+
 if data_loaded:
     controller.data_manager.load_from_dataframe(df)
     controller.dashboard.set_view(controller.graph_view)
@@ -591,7 +594,43 @@ if page == "Dashboard":
                             st.error("CSV file is empty or has no data rows.")
                         else:
                             uploaded.seek(0)
-                            custom = pd.read_csv(uploaded)
+                            # Detect multi-row header (coffee CSV format):
+                            # the coffee file has 3+ columns
+                            # (Date, Number Sold, <blank>) due to a
+                            # trailing comma, whereas the croissant file
+                            # only has 2 columns (Date, Number Sold).
+                            first_row = pd.read_csv(uploaded, nrows=0).columns.tolist()
+                            uploaded.seek(0)
+                            is_coffee_format = (
+                                len(first_row) >= 3
+                                and any("Number Sold" in str(c) for c in first_row)
+                                and any("Date" in str(c) for c in first_row)
+                            )
+                            if is_coffee_format:
+                                # Coffee-style multi-row header — reuse
+                                # the preprocessor's parsing logic via temp file
+                                import tempfile as _tmpfile2
+                                with _tmpfile2.NamedTemporaryFile(
+                                    delete=False, suffix=".csv", mode="wb"
+                                ) as _tf:
+                                    _tf.write(uploaded.getvalue())
+                                    _tf_path = _tf.name
+                                custom = _read_coffee(_tf_path)
+                                os.unlink(_tf_path)
+                            else:
+                                custom = pd.read_csv(uploaded)
+                            # Rename common alternate headers so the
+                            # rest of the app recognises the column.
+                            if "Number Sold" in custom.columns:
+                                custom = custom.rename(
+                                    columns={"Number Sold": "Croissants"}
+                                )
+                            # Ensure product columns are numeric
+                            for p in PRODUCTS:
+                                if p in custom.columns:
+                                    custom[p] = pd.to_numeric(
+                                        custom[p], errors="coerce"
+                                    )
                             if "Date" in custom.columns:
                                 custom["Date"] = pd.to_datetime(
                                     custom["Date"],
@@ -605,6 +644,7 @@ if page == "Dashboard":
                             st.session_state["custom_df"] = custom
                             df = custom
                             data_loaded = True
+                            available_products = [p for p in PRODUCTS if p in df.columns]
                             controller.data_manager.load_from_dataframe(df)
                             st.success(
                                 f"File loaded: **{uploaded.name}** — "
@@ -631,7 +671,7 @@ if page == "Dashboard":
                     st.markdown(
                         f"| | |\n|:--|:--|\n"
                         f"| **Rows** | {len(df):,} |\n"
-                        f"| **Products** | Cappuccino, Americano, Croissants |\n"
+                        f"| **Products** | {', '.join(available_products)} |\n"
                         f"| **Date range** | "
                         f"{df['Date'].min().strftime('%d %b %Y')} -> "
                         f"{df['Date'].max().strftime('%d %b %Y')} |\n"
@@ -658,7 +698,7 @@ if page == "Dashboard":
                         ("Reasonable numeric values",
                          bool(all(
                              (df[p] >= 0).all() and (df[p] < 10_000).all()
-                             for p in PRODUCTS
+                             for p in PRODUCTS if p in df.columns
                          ))),
                         ("No duplicate entries",
                          bool(df.duplicated().sum() == 0)),
@@ -682,7 +722,7 @@ if page == "Dashboard":
             f1, f2, _ = st.columns([1.2, 2.8, 0.5])
             with f1:
                 sel_product = st.selectbox(
-                    "Product", ["All Products"] + PRODUCTS,
+                    "Product", ["All Products"] + available_products,
                     label_visibility="collapsed",
                 )
             with f2:
@@ -701,7 +741,7 @@ if page == "Dashboard":
                 controller.dashboard.toggle_view(ViewType.GRAPH)
                 controller.dashboard.set_view(controller.graph_view)
                 plot_cols = (
-                    PRODUCTS if sel_product == "All Products"
+                    available_products if sel_product == "All Products"
                     else [sel_product]
                 )
                 sales_by_product = {}
@@ -726,7 +766,7 @@ if page == "Dashboard":
                 with st.container(border=True):
                     section_title("fa-trophy", "Top Selling Products")
                     totals = dict(sorted(
-                        {p: int(df_win[p].sum()) for p in PRODUCTS}.items(),
+                        {p: int(df_win[p].sum()) for p in available_products}.items(),
                         key=lambda x: x[1],
                     ))
                     fig_bar = go.Figure(go.Bar(
@@ -756,7 +796,7 @@ if page == "Dashboard":
                     section_title("fa-table", "Recent Performance by Product")
                     df_prev = df.tail(days * 2).head(days)
                     rows = []
-                    for p in PRODUCTS:
+                    for p in available_products:
                         product_obj = Product(p, Category.COFFEE if p != "Croissants" else Category.PASTRY)
                         product_sales = controller.data_manager.get_sales_by_product(p)
                         fluctuation = controller.sales_analyzer.get_sales_fluctuation(
@@ -781,7 +821,7 @@ if page == "Dashboard":
                 section_title("fa-sliders", "Forecast Configuration")
                 c1, c2, c3, c4 = st.columns([1.2, 1.2, 1.8, 0.8])
                 with c1:
-                    fc_product = st.selectbox("Product", PRODUCTS, key="fc_product")
+                    fc_product = st.selectbox("Product", available_products, key="fc_product")
                 with c2:
                     fc_algo = st.selectbox("Model", sorted(VALID_ALGORITHMS),
                                            key="fc_algo")
