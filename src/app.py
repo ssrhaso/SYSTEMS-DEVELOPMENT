@@ -82,7 +82,7 @@ html, body, [class*="css"] {
 .stApp { background-color: #F8F9FA !important; }
 .main .block-container {
     background-color: #F8F9FA !important;
-    padding: 1.8rem 2.2rem 2rem 2.2rem !important;
+    padding: 0.9rem 2.2rem 2rem 2.2rem !important;
     max-width: 1400px;
 }
 
@@ -736,15 +736,21 @@ if page == "Dashboard":
                         marker_color=[PRODUCT_COLOURS.get(k, PINK) for k in totals],
                         text=[f"{v:,}" for v in totals.values()],
                         textposition="outside",
-                        textfont=dict(color="#374151", size=11),
+                        textfont=dict(color="#374151", size=12),
+                        cliponaxis=False,
                     ))
-                    plotly_axes(fig_bar, height=190, top=5,
+                    plotly_axes(fig_bar, height=210, top=5,
                                 y_title="", x_tickformat=",d")
                     fig_bar.update_layout(
-                        margin=dict(l=0, r=65, t=5, b=0),
-                        xaxis=dict(showgrid=False, showticklabels=False),
+                        margin=dict(l=0, r=90, t=5, b=0),
+                        xaxis=dict(
+                            showgrid=False,
+                            showticklabels=False,
+                            autorange=True,
+                        ),
                         yaxis=dict(showgrid=False,
                                    tickfont=dict(size=12, color="#374151")),
+                        uniformtext=dict(minsize=10, mode="show"),
                     )
                     st.plotly_chart(fig_bar, use_container_width=True)
 
