@@ -17,6 +17,7 @@ from models import (
     Product,
     SaleRecord,
     Prediction,
+    CSVReader,
     DataManager,
     SalesAnalyzer,
     PredictionEngine,
@@ -398,6 +399,7 @@ for _k, _v in [
     ]),
     ("editing_loc", None),
     ("adding_loc", False),
+    ("custom_df", None),
 ]:
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -417,8 +419,17 @@ except Exception as exc:
     data_error = str(exc)
 
 controller = DashboardController()
+
+# If user previously uploaded a custom CSV, use it as the active dataset
+if st.session_state.get("custom_df") is not None:
+    df = st.session_state["custom_df"]
+    data_loaded = True
+    data_error = None
+
 if data_loaded:
     controller.data_manager.load_from_dataframe(df)
+    controller.dashboard.set_view(controller.graph_view)
+    controller.dashboard.toggle_view(ViewType.GRAPH)
 
 
 def html_table(data: pd.DataFrame):
@@ -567,12 +578,41 @@ if page == "Dashboard":
                 )
                 if uploaded:
                     try:
-                        custom = pd.read_csv(uploaded)
-                        st.success(
-                            f"File loaded: **{uploaded.name}** — "
-                            f"{len(custom):,} rows detected"
-                        )
-                        html_table(custom.head(8))
+                        # Use CSVReader for raw validation, then parse with pandas
+                        import tempfile as _tmpfile
+                        with _tmpfile.NamedTemporaryFile(
+                            delete=False, suffix=".csv", mode="wb"
+                        ) as _tmp:
+                            _tmp.write(uploaded.getvalue())
+                            _tmp_path = _tmp.name
+                        raw_rows = CSVReader.read_rows(_tmp_path)
+                        os.unlink(_tmp_path)
+                        if not raw_rows or len(raw_rows) < 2:
+                            st.error("CSV file is empty or has no data rows.")
+                        else:
+                            uploaded.seek(0)
+                            custom = pd.read_csv(uploaded)
+                            if "Date" in custom.columns:
+                                custom["Date"] = pd.to_datetime(
+                                    custom["Date"],
+                                    format="%d/%m/%Y",
+                                    errors="coerce",
+                                )
+                                custom = custom.dropna(
+                                    subset=["Date"]
+                                ).sort_values("Date").reset_index(drop=True)
+                            # Integrate uploaded data into the controller
+                            st.session_state["custom_df"] = custom
+                            df = custom
+                            data_loaded = True
+                            controller.data_manager.load_from_dataframe(df)
+                            st.success(
+                                f"File loaded: **{uploaded.name}** — "
+                                f"{len(custom):,} rows, "
+                                f"{len(raw_rows) - 1} raw CSV records validated "
+                                f"via CSVReader"
+                            )
+                            html_table(custom.head(8))
                     except Exception as e:
                         st.error(f"Could not read file: {e}")
                 elif data_loaded:
@@ -657,6 +697,9 @@ if page == "Dashboard":
 
             with st.container(border=True):
                 section_title("fa-chart-line", "Sales Over Time")
+                # Set dashboard to graph view for the chart section
+                controller.dashboard.toggle_view(ViewType.GRAPH)
+                controller.dashboard.set_view(controller.graph_view)
                 plot_cols = (
                     PRODUCTS if sel_product == "All Products"
                     else [sel_product]
@@ -707,6 +750,9 @@ if page == "Dashboard":
 
             with tc:
                 with st.container(border=True):
+                    # Switch dashboard to table view for the performance table
+                    controller.dashboard.toggle_view(ViewType.TABLE)
+                    controller.dashboard.set_view(controller.table_view)
                     section_title("fa-table", "Recent Performance by Product")
                     df_prev = df.tail(days * 2).head(days)
                     rows = []
@@ -749,8 +795,14 @@ if page == "Dashboard":
 
             if run_btn:
                 series = to_series(df, fc_product)
+                # Train the prediction engine with historical sale records
+                all_product_sales = controller.data_manager.get_sales_by_product(fc_product)
+                controller.prediction_engine.train_model(all_product_sales)
                 controller.prediction_engine.set_training_period(fc_weeks)
                 controller.prediction_engine.algorithm = AlgorithmType(fc_algo)
+                # Switch to graph view for forecast display
+                controller.dashboard.toggle_view(ViewType.GRAPH)
+                controller.dashboard.set_view(controller.graph_view)
                 with st.spinner(
                     f"Running {fc_algo} on {fc_product} — "
                     "this may take up to 60 seconds..."

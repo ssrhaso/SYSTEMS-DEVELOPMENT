@@ -2,7 +2,6 @@ from datetime import date
 
 import plotly.graph_objects as go
 
-from .dashboard_view import IDashboardView
 from .prediction import Prediction
 from .sale_record import SaleRecord
 
@@ -13,11 +12,8 @@ PRODUCT_COLOURS = {
 }
 
 
-class GraphView(IDashboardView):
+class GraphView:
     PINK = "#E8547A"
-
-    def refresh(self) -> None:
-        pass
 
     def plot_history(self, data: list[SaleRecord]) -> go.Figure:
         if not data:

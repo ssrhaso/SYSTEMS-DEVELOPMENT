@@ -1,13 +1,10 @@
 import streamlit as st
 import pandas as pd
 
-from .dashboard_view import IDashboardView
 from .sale_record import SaleRecord
 
 
-class TableView(IDashboardView):
-    def refresh(self) -> None:
-        pass
+class TableView:
 
     def render_table(self, data: list[SaleRecord]) -> None:
         if not data:
