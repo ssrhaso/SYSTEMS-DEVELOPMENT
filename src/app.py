@@ -12,6 +12,23 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, os.path.dirname(__file__))
 from preprocessor import load_all, to_series
 from model import run_forecast, VALID_ALGORITHMS
+from models import (
+    Category,
+    Product,
+    SaleRecord,
+    Prediction,
+    CSVReader,
+    DataManager,
+    SalesAnalyzer,
+    PredictionEngine,
+    AlgorithmType,
+    AccuracyEvaluator,
+    GraphView,
+    TableView,
+    MainDashboard,
+    ViewType,
+    DashboardController,
+)
 
 
 st.set_page_config(
@@ -382,6 +399,7 @@ for _k, _v in [
     ]),
     ("editing_loc", None),
     ("adding_loc", False),
+    ("custom_df", None),
 ]:
     if _k not in st.session_state:
         st.session_state[_k] = _v
@@ -400,33 +418,22 @@ except Exception as exc:
     data_loaded = False
     data_error = str(exc)
 
+controller = DashboardController()
+
+# If user previously uploaded a custom CSV, use it as the active dataset
+if st.session_state.get("custom_df") is not None:
+    df = st.session_state["custom_df"]
+    data_loaded = True
+    data_error = None
+
+if data_loaded:
+    controller.data_manager.load_from_dataframe(df)
+    controller.dashboard.set_view(controller.graph_view)
+    controller.dashboard.toggle_view(ViewType.GRAPH)
+
 
 def html_table(data: pd.DataFrame):
-    header_cells = "".join(
-        f"<th style='background:#F3F4F6;color:#111827;font-weight:600;"
-        f"padding:0.55rem 0.85rem;text-align:left;font-size:0.93rem;"
-        f"border-bottom:2px solid #E5E7EB;white-space:nowrap;'>{col}</th>"
-        for col in data.columns
-    )
-    rows_html = ""
-    for i, row in enumerate(data.itertuples(index=False)):
-        bg = "#FFFFFF" if i % 2 == 0 else "#F9FAFB"
-        cells = "".join(
-            f"<td style='padding:0.48rem 0.85rem;color:#111827;"
-            f"font-size:0.93rem;border-bottom:1px solid #F3F4F6;"
-            f"white-space:nowrap;'>{v}</td>"
-            for v in row
-        )
-        rows_html += f"<tr style='background:{bg};'>{cells}</tr>"
-    st.markdown(
-        f"<div style='overflow-x:auto;border:1px solid #E5E7EB;"
-        f"border-radius:8px;margin-top:0.4rem;'>"
-        f"<table style='width:100%;border-collapse:collapse;'>"
-        f"<thead><tr>{header_cells}</tr></thead>"
-        f"<tbody>{rows_html}</tbody>"
-        f"</table></div>",
-        unsafe_allow_html=True,
-    )
+    controller.table_view.render_dataframe(data)
 
 
 def pink_info(msg: str):
@@ -571,12 +578,41 @@ if page == "Dashboard":
                 )
                 if uploaded:
                     try:
-                        custom = pd.read_csv(uploaded)
-                        st.success(
-                            f"File loaded: **{uploaded.name}** — "
-                            f"{len(custom):,} rows detected"
-                        )
-                        html_table(custom.head(8))
+                        # Use CSVReader for raw validation, then parse with pandas
+                        import tempfile as _tmpfile
+                        with _tmpfile.NamedTemporaryFile(
+                            delete=False, suffix=".csv", mode="wb"
+                        ) as _tmp:
+                            _tmp.write(uploaded.getvalue())
+                            _tmp_path = _tmp.name
+                        raw_rows = CSVReader.read_rows(_tmp_path)
+                        os.unlink(_tmp_path)
+                        if not raw_rows or len(raw_rows) < 2:
+                            st.error("CSV file is empty or has no data rows.")
+                        else:
+                            uploaded.seek(0)
+                            custom = pd.read_csv(uploaded)
+                            if "Date" in custom.columns:
+                                custom["Date"] = pd.to_datetime(
+                                    custom["Date"],
+                                    format="%d/%m/%Y",
+                                    errors="coerce",
+                                )
+                                custom = custom.dropna(
+                                    subset=["Date"]
+                                ).sort_values("Date").reset_index(drop=True)
+                            # Integrate uploaded data into the controller
+                            st.session_state["custom_df"] = custom
+                            df = custom
+                            data_loaded = True
+                            controller.data_manager.load_from_dataframe(df)
+                            st.success(
+                                f"File loaded: **{uploaded.name}** — "
+                                f"{len(custom):,} rows, "
+                                f"{len(raw_rows) - 1} raw CSV records validated "
+                                f"via CSVReader"
+                            )
+                            html_table(custom.head(8))
                     except Exception as e:
                         st.error(f"Could not read file: {e}")
                 elif data_loaded:
@@ -641,7 +677,7 @@ if page == "Dashboard":
 
     with tab_insights:
         if not data_loaded:
-            st.error("No data loaded.")
+            controller.dashboard.show_error_message("No data loaded.")
         else:
             f1, f2, _ = st.columns([1.2, 2.8, 0.5])
             with f1:
@@ -661,18 +697,19 @@ if page == "Dashboard":
 
             with st.container(border=True):
                 section_title("fa-chart-line", "Sales Over Time")
+                # Set dashboard to graph view for the chart section
+                controller.dashboard.toggle_view(ViewType.GRAPH)
+                controller.dashboard.set_view(controller.graph_view)
                 plot_cols = (
                     PRODUCTS if sel_product == "All Products"
                     else [sel_product]
                 )
-                fig_line = go.Figure()
+                sales_by_product = {}
+                min_date = df_win["Date"].min().date()
                 for col in plot_cols:
-                    fig_line.add_trace(go.Scatter(
-                        x=df_win["Date"], y=df_win[col],
-                        mode="lines+markers", name=col,
-                        line=dict(color=PRODUCT_COLOURS.get(col, PINK), width=2),
-                        marker=dict(size=4),
-                    ))
+                    records = controller.data_manager.get_sales_by_product(col)
+                    sales_by_product[col] = [r for r in records if r.date >= min_date]
+                fig_line = controller.graph_view.plot_multi_product_history(sales_by_product)
                 plotly_axes(fig_line, height=270, top=10, y_title="Units Sold")
                 fig_line.update_layout(
                     legend=dict(
@@ -719,16 +756,24 @@ if page == "Dashboard":
 
             with tc:
                 with st.container(border=True):
+                    # Switch dashboard to table view for the performance table
+                    controller.dashboard.toggle_view(ViewType.TABLE)
+                    controller.dashboard.set_view(controller.table_view)
                     section_title("fa-table", "Recent Performance by Product")
                     df_prev = df.tail(days * 2).head(days)
                     rows = []
                     for p in PRODUCTS:
-                        curr = df_win[p].sum()
+                        product_obj = Product(p, Category.COFFEE if p != "Croissants" else Category.PASTRY)
+                        product_sales = controller.data_manager.get_sales_by_product(p)
+                        fluctuation = controller.sales_analyzer.get_sales_fluctuation(
+                            product_obj, weeks=max(1, days // 7), sales=product_sales
+                        )
+                        curr = sum(fluctuation.values()) if fluctuation else int(df_win[p].sum())
                         prev = df_prev[p].sum() if len(df_prev) else curr
                         pct = ((curr - prev) / prev * 100) if prev else 0
                         rows.append({
                             "Product": p,
-                            "Category": "Coffee" if p != "Croissants" else "Pastry",
+                            "Category": product_obj.get_type().value,
                             f"Units ({win_label})": f"{int(curr):,}",
                             "% Change": f"+{pct:.1f}%" if pct >= 0 else f"{pct:.1f}%",
                         })
@@ -736,7 +781,7 @@ if page == "Dashboard":
 
     with tab_forecast:
         if not data_loaded:
-            st.error("No data loaded.")
+            controller.dashboard.show_error_message("No data loaded.")
         else:
             with st.container(border=True):
                 section_title("fa-sliders", "Forecast Configuration")
@@ -756,16 +801,28 @@ if page == "Dashboard":
 
             if run_btn:
                 series = to_series(df, fc_product)
+                # Train the prediction engine with historical sale records
+                all_product_sales = controller.data_manager.get_sales_by_product(fc_product)
+                controller.prediction_engine.train_model(all_product_sales)
+                controller.prediction_engine.set_training_period(fc_weeks)
+                controller.prediction_engine.algorithm = AlgorithmType(fc_algo)
+                # Switch to graph view for forecast display
+                controller.dashboard.toggle_view(ViewType.GRAPH)
+                controller.dashboard.set_view(controller.graph_view)
                 with st.spinner(
                     f"Running {fc_algo} on {fc_product} — "
                     "this may take up to 60 seconds..."
                 ):
-                    result = run_forecast(series, fc_algo, fc_weeks)
+                    result = controller.prediction_engine.run_forecast_from_series(
+                        series, fc_algo, fc_weeks
+                    )
+                controller.accuracy_evaluator.compare_from_result(result)
                 st.session_state.forecast_res = result
                 st.session_state.forecast_cfg = {
                     "product": fc_product,
                     "algo": fc_algo,
                     "weeks": fc_weeks,
+                    "accuracy_score": controller.accuracy_evaluator.get_accuracy_score(),
                 }
 
             res = st.session_state.forecast_res
@@ -793,25 +850,39 @@ if page == "Dashboard":
                 hist = res["history_df"]
                 fc_df = res["forecast_df"]
 
-                m1, m2, m3, m4 = st.columns(4)
+                m1, m2, m3, m4, m5 = st.columns(5)
                 m1.metric("MAPE", f"{m['mape']:.2f}%" if m['mape'] else "—")
                 m2.metric("MAE", f"{m['mae']:.1f}" if m['mae'] else "—")
                 m3.metric("RMSE", f"{m['rmse']:.1f}" if m['rmse'] else "—")
                 m4.metric("Target Met", "Yes" if m["meets_target"] else "No")
+                accuracy = cfg.get("accuracy_score", 0)
+                m5.metric("Accuracy", f"{accuracy:.1f}%" if accuracy else "—")
 
                 with st.container(border=True):
-                    fig_fc = go.Figure()
-                    fig_fc.add_trace(go.Scatter(
-                        x=hist["ds"], y=hist["y"],
-                        mode="lines", name="Historical",
-                        line=dict(color="#9CA3AF", width=2),
-                    ))
-                    fig_fc.add_trace(go.Scatter(
-                        x=fc_df["ds"], y=fc_df["yhat"],
-                        mode="lines+markers", name="28-Day Forecast",
-                        line=dict(color="#111827", width=2.5, dash="dash"),
-                        marker=dict(size=5, color="#111827"),
-                    ))
+                    product_obj = Product(
+                        cfg.get("product", ""),
+                        Category.COFFEE if cfg.get("product") != "Croissants" else Category.PASTRY,
+                    )
+                    history_records = [
+                        SaleRecord(
+                            sale_date=row["ds"].date() if hasattr(row["ds"], "date") else row["ds"],
+                            bakery_location="Bristol Centre",
+                            quantity_sold=int(row["y"]),
+                            product=product_obj,
+                        )
+                        for _, row in hist.iterrows()
+                    ]
+                    prediction_records = [
+                        Prediction(
+                            product=product_obj,
+                            predicted_date=row["ds"].date() if hasattr(row["ds"], "date") else row["ds"],
+                            predicted_quantity=float(row["yhat"]),
+                        )
+                        for _, row in fc_df.iterrows()
+                    ]
+                    fig_fc = controller.graph_view.plot_history_and_prediction(
+                        history_records, prediction_records
+                    )
                     plotly_axes(fig_fc, height=340, top=65, y_title="Units Sold")
                     fig_fc.update_layout(
                         title=dict(
