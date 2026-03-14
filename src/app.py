@@ -12,7 +12,7 @@ warnings.filterwarnings("ignore")
 sys.path.insert(0, os.path.dirname(__file__))
 from preprocessor import load_all, to_series, _read_coffee
 from model import run_forecast, VALID_ALGORITHMS
-from model import (
+from models import (
     Category,
     Product,
     SaleRecord,
