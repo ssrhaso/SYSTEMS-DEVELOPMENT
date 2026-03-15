@@ -1,4 +1,3 @@
-
 # Bristol Pink Cafe - Sales Forecasting Dashboard
 
 An intelligent forecasting dashboard that predicts bakery product sales across five Bristol Pink Cafe locations using time series and machine learning algorithms, enabling data-driven inventory management to minimise food waste.
@@ -28,7 +27,7 @@ A Streamlit-based dashboard that ingests historical sales CSV data, visualises t
 ## Tech Stack
 
 * **Frontend:** Streamlit, Plotly
-* **Forecasting:** Facebook Prophet, pmdarima (ARIMA), XGBoost
+* **Forecasting:** Facebook Prophet, pmdarima (ARIMA), XGBoost, Ensemble model
 * **Evaluation:** 3-split walk-forward validation with MAPE, MAE, RMSE
 * **Language:** Python 3.8+
 
@@ -62,26 +61,28 @@ python -m streamlit run src/app.py
 
 The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to begin.
 
-## Forecasting Performance
+## Forecasting Performance (Validated on provided dataset)
 
 | Algorithm | Cappuccino MAPE | Americano MAPE | Croissant MAPE |
 | --------- | :-------------: | :------------: | :------------: |
-| Prophet   |      ~22%      |      ~15%      |     ~41%*     |
-| ARIMA     |      ~19%      |      ~12%      |      ~30%      |
-| XGBoost   |      ~20%      |      ~13%      |      ~28%      |
-| Ensemble  |      ~18%      |      ~11%      |      ~33%      |
+| Prophet   |      ~23%       |      ~19%      |      ~50%      |
+| ARIMA     |      ~17%       |      ~11%      |      ~48%      |
+| XGBoost   |      ~17%       |      ~14%      |      ~47%      |
+| Ensemble  |      ~17%       |      ~12%      |      ~46%      |
 
-**Croissant series has high coefficient of variation (~30%), creating an inherent accuracy ceiling for all models.*
+**Values above are from the current implementation using a 4-week training window and 3-split walk-forward validation.**
+
+**Croissant series shows high volatility and materially higher forecast error across all tested algorithms.**
 
 ## Contributors
 
-| Name                   | Focus Area                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------- |
-| Hasaan Ahmad           | Forecasting algorithms, Pseudocode, System architecture, Streamlit App Development    |
-| Chouaib Hakim          | Literature review (food waste reduction), Use case Diagram, Streamlit App Development |
-| Ishaq Modassir Mushtaq | Data Preprocessing, Class diagrams, Unit Test Cases, ML for Demand Prediction         |
-| Rayyan Tahir           | Software engineering practices, Sequence Diagrams                                     |
-| Royden Valerian Dias   | UI/UX wireframes, Dashboard Design, Streamlit App Development                         |
+| Name                   | Focus Area                                                                                          |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| Hasaan Ahmad           | Project Manager, Forecasting algorithms, Pseudocode, System architecture, Streamlit App Development |
+| Chouaib Hakim          | Literature review (section on food waste reduction), Use case Diagram                               |
+| Ishaq Modassir Mushtaq | Data Preprocessing, Class diagrams, Unit Test Cases, ML for Demand Prediction                       |
+| Rayyan Tahir           | Software engineering practices, Sequence Diagrams, Testing                                          |
+| Royden Valerian Dias   | UI/UX wireframes, Dashboard Design, Streamlit App Development                                       |
 
 ## License
 

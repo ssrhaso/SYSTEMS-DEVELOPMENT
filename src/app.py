@@ -1,3 +1,12 @@
+""" 
+Main App.py Streamlit Entry Point Script
+
+Royden Dias - 22036792
+Hasaan Ahmad - 23010646
+Rayyan Tahir - 24063400
+"""
+
+
 import os
 import sys
 import warnings
