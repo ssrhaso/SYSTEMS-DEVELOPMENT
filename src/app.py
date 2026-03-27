@@ -19,7 +19,7 @@ import streamlit as st
 warnings.filterwarnings("ignore")
 
 sys.path.insert(0, os.path.dirname(__file__))
-from preprocessor import load_all, to_series, _read_coffee
+from preprocessor import to_series, _read_coffee
 from model import run_forecast, VALID_ALGORITHMS
 from models import (
     Category,
@@ -414,18 +414,9 @@ for _k, _v in [
         st.session_state[_k] = _v
 
 
-@st.cache_data(show_spinner=False)
-def get_data() -> pd.DataFrame:
-    return load_all()
-
-try:
-    df = get_data()
-    data_loaded = True
-    data_error = None
-except Exception as exc:
-    df = pd.DataFrame()
-    data_loaded = False
-    data_error = str(exc)
+df = pd.DataFrame()
+data_loaded = False
+data_error = None
 
 controller = DashboardController()
 
@@ -600,7 +591,7 @@ if page == "Dashboard":
                         raw_rows = CSVReader.read_rows(_tmp_path)
                         os.unlink(_tmp_path)
                         if not raw_rows or len(raw_rows) < 2:
-                            st.error("CSV file is empty or has no data rows.")
+                            st.warning("CSV file is empty or has no data rows.")
                         else:
                             uploaded.seek(0)
                             # Detect multi-row header (coffee CSV format):
@@ -665,10 +656,12 @@ if page == "Dashboard":
                     except Exception as e:
                         st.error(f"Could not read file: {e}")
                 elif data_loaded:
-                    pink_info("Using pre-loaded Pink Café data from /data/raw/")
+                    pink_info("Using uploaded data")
                     disp = df.head(8).copy()
                     disp["Date"] = disp["Date"].dt.strftime("%d/%m/%Y")
                     html_table(disp)
+                else:
+                    st.info("Upload a CSV file to get started.")
 
         with right:
             with st.container(border=True):
@@ -688,10 +681,9 @@ if page == "Dashboard":
                         f"| **Duplicates** | {df.duplicated().sum()} |"
                     )
                 else:
-                    st.markdown(badge_html("No file loaded", green=False),
+                    st.markdown(badge_html("Data not loaded", green=False),
                                 unsafe_allow_html=True)
-                    if data_error:
-                        st.caption(data_error)
+                    st.caption("Upload a CSV file to load your data.")
 
             st.markdown("")
 
@@ -726,7 +718,7 @@ if page == "Dashboard":
 
     with tab_insights:
         if not data_loaded:
-            controller.dashboard.show_error_message("No data loaded.")
+            st.info("Data not loaded. Please upload a CSV file in the Data tab.")
         else:
             f1, f2, _ = st.columns([1.2, 2.8, 0.5])
             with f1:
@@ -824,7 +816,7 @@ if page == "Dashboard":
 
     with tab_forecast:
         if not data_loaded:
-            controller.dashboard.show_error_message("No data loaded.")
+            st.info("Data not loaded. Please upload a CSV file in the Data tab.")
         else:
             with st.container(border=True):
                 section_title("fa-sliders", "Forecast Configuration")
@@ -1063,7 +1055,7 @@ elif page == "Reports":
                         mime="text/csv",
                     )
                 else:
-                    st.error("No data loaded.")
+                    st.info("Data not loaded. Please upload a CSV file in the Data tab.")
 
     with r2:
         with st.container(border=True):
