@@ -65,10 +65,10 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 
 | Algorithm | Cappuccino MAPE | Americano MAPE | Croissant MAPE |
 | --------- | :-------------: | :------------: | :------------: |
-| Prophet   |      ~23%       |      ~19%      |      ~50%      |
-| ARIMA     |      ~17%       |      ~11%      |      ~48%      |
-| XGBoost   |      ~17%       |      ~14%      |      ~47%      |
-| Ensemble  |      ~17%       |      ~12%      |      ~46%      |
+| Prophet   |      ~23%      |      ~19%      |      ~50%      |
+| ARIMA     |      ~17%      |      ~11%      |      ~48%      |
+| XGBoost   |      ~17%      |      ~14%      |      ~47%      |
+| Ensemble  |      ~17%      |      ~12%      |      ~46%      |
 
 **Values above are from the current implementation using a 4-week training window and 3-split walk-forward validation.**
 
@@ -87,3 +87,5 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 ## License
 
 Developed for UFCF7S-30-2 coursework at UWE Bristol. Contact the project team for reuse or distribution permissions.
+
+Not for reuse or real industry use.
