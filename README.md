@@ -87,5 +87,3 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 ## License
 
 Developed for UFCF7S-30-2 coursework at UWE Bristol. Contact the project team for reuse or distribution permissions.
-
-Not for reuse or real industry use.
