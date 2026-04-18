@@ -1,7 +1,7 @@
 """
 Preprocessing Script 
 
-Ishaq Modassir Musthaq - 24030388 
+Ishaq Modassir Mushtaq - 24030388 
 """
 
 import os
