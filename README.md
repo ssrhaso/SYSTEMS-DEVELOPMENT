@@ -76,7 +76,7 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 
 ## Contributors
 
-| Name                   | Focus Area                                                                                          |
+| Name                   | Main Contributions                                                                                  |
 | ---------------------- | --------------------------------------------------------------------------------------------------- |
 | Hasaan Ahmad           | Project Manager, Forecasting algorithms, Pseudocode, System architecture, Streamlit App Development |
 | Chouaib Hakim          | Literature review (section on food waste reduction), Use case Diagram                               |
