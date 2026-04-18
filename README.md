@@ -72,6 +72,8 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 
 **Values above are from the current implementation using a 4-week training window and 3-split walk-forward validation.**
 
+>  NOTE: The Performance was tested on the given dataset from our module team, and should be taken as a guideline for generalised performance, not specific.
+
 **Croissant series shows high volatility and materially higher forecast error across all tested algorithms.**
 
 ## Contributors
