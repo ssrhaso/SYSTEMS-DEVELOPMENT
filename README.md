@@ -19,7 +19,7 @@ A Streamlit-based dashboard that ingests historical sales CSV data, visualises t
 | Feature                           | Description                                                                                           |
 | --------------------------------- | ----------------------------------------------------------------------------------------------------- |
 | **CSV Import & Validation** | Robust upload with format detection, error handling for malformed data, and clear user feedback (FR1) |
-| **Sales Visualisation**     | Interactive line charts and bar charts with adjustable time windows - 1, 4, or 8 weeks (FR2, FR3)     |
+| **Sales Visualisation**     | Interactive line charts and bar charts with adjustable time windows - 1, 4, or 12 weeks (FR2, FR3)     |
 | **Forecasting Engine**      | Prophet, ARIMA, XGBoost, and Ensemble models producing 28-day predictions with MAPE ≤ 35% (FR4)      |
 | **Training Window Control** | Slider to adjust training period between 4–8 weeks, with live metric recalculation (FR5)             |
 | **Data Export**             | Download forecast results as CSV and chart images as PNG (FR6)                                        |
