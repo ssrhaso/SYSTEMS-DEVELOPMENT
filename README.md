@@ -37,6 +37,12 @@ A Streamlit-based dashboard that ingests historical sales CSV data, visualises t
 └── analysis/               # Exploratory analysis scripts
 ```
 
+## Prerequisites
+
+- **Python 3.10+** installed and available on `PATH`
+- ~500 MB free disk space for dependencies (Prophet, XGBoost, Streamlit, etc.)
+- A modern web browser (Chrome, Edge, Firefox) to view the dashboard
+
 ## Quick Start
 
 ```bash
