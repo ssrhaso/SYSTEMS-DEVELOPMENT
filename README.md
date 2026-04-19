@@ -24,13 +24,6 @@ A Streamlit-based dashboard that ingests historical sales CSV data, visualises t
 | **Training Window Control** | Slider to adjust training period between 4–8 weeks, with live metric recalculation (FR5)             |
 | **Data Export**             | Download forecast results as CSV and chart images as PNG (FR6)                                        |
 
-## Tech Stack
-
-* **Frontend:** Streamlit, Plotly
-* **Forecasting:** Facebook Prophet, pmdarima (ARIMA), XGBoost, Ensemble model
-* **Evaluation:** 3-split walk-forward validation with MAPE, MAE, RMSE
-* **Language:** Python 3.8+
-
 ## Repository Structure
 
 ```
@@ -72,7 +65,7 @@ The dashboard opens at `http://localhost:8501`. Upload a CSV from `data/raw/` to
 
 **Values above are from the current implementation using a 4-week training window and 3-split walk-forward validation.**
 
->  NOTE: The Performance was tested on the given dataset from our module team, and should be taken as a guideline for generalised performance, not specific.
+> NOTE: The Performance was tested on the given dataset from our module team, and should be taken as a guideline for generalised performance, not specific.
 
 **Croissant series shows high volatility and materially higher forecast error across all tested algorithms.**
 
