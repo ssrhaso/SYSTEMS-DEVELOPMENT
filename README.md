@@ -1,6 +1,6 @@
 # Bristol Pink Cafe - Sales Forecasting Dashboard
 
-An intelligent forecasting dashboard that predicts bakery product sales across five Bristol Pink Cafe locations using time series and machine learning algorithms, enabling data-driven inventory management to minimise food waste.
+An intelligent forecasting dashboard that predicts bakery product sales for Bristol Pink Cafe using time series and machine learning algorithms, enabling data-driven inventory management to minimise food waste.
 
 Developed as part of **UFCF7S-30-2 Systems Development Group Project** at UWE Bristol.
 
@@ -12,17 +12,17 @@ Bakeries waste between 5–15% of daily production due to inaccurate demand esti
 
 ## Solution
 
-A Streamlit-based dashboard that ingests historical sales CSV data, visualises trends across products and locations, and generates 28-day sales predictions using configurable forecasting models — all accessible to non-technical bakery managers.
+A Streamlit-based dashboard that ingests historical sales CSV data, visualises trends across products and locations, and generates 28-day sales predictions using configurable forecasting models -  all accessible to non-technical bakery managers.
 
 ## Key Features
 
-| Feature                           | Description                                                                                           |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| **CSV Import & Validation** | Robust upload with format detection, error handling for malformed data, and clear user feedback (FR1) |
-| **Sales Visualisation**     | Interactive line charts and bar charts with adjustable time windows - 1, 4, or 12 weeks (FR2, FR3)     |
-| **Forecasting Engine**      | Prophet, ARIMA, XGBoost, and Ensemble models producing 28-day predictions with MAPE ≤ 35% (FR4)      |
-| **Training Window Control** | Slider to adjust training period between 4–8 weeks, with live metric recalculation (FR5)             |
-| **Data Export**             | Download forecast results as CSV and chart images as PNG (FR6)                                        |
+| Feature                           | Description                                                                                                             |
+| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| **CSV Import & Validation** | Robust upload with format detection, error handling for malformed data, and clear user feedback (FR1)                   |
+| **Sales Visualisation**     | Interactive line charts and bar charts with adjustable time windows - 1, 4, or 12 weeks (FR2, FR3)                      |
+| **Forecasting Engine**      | Prophet, ARIMA, XGBoost, and Ensemble models producing 28-day predictions, achieving MAPE ≤ 35% on stable series (FR4) |
+| **Training Window Control** | Slider to adjust training period between 4–8 weeks, with live metric recalculation (FR5)                               |
+| **Data Export**             | Download forecast results as CSV and chart images as PNG (FR6)                                                          |
 
 ## Repository Structure
 
