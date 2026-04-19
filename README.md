@@ -29,12 +29,12 @@ A Streamlit-based dashboard that ingests historical sales CSV data, visualises t
 ```
 ├── src/
 │   ├── app.py              # Streamlit dashboard (entry point)
-│   ├── model.py            # Forecasting engine (Prophet, ARIMA, XGBoost, Ensemble)
-│   └── preprocessor.py     # Data loading and cleaning utilities
-├── data/
-│   └── raw/                # Historical sales CSVs (March–October 2025)
-├── models/                 # Model definitions and evaluation utilities
-└── analysis/               # Exploratory analysis scripts
+│   ├── model.py            # Forecasting engine
+│   ├── preprocessor.py     # Data loading and cleaning utilities
+│   └── models/             # Domain classes and evaluation utilities
+└── data/
+    ├── raw/                # Historical sales CSVs
+    └── processed/          # Generated chart PNGs
 ```
 
 ## Prerequisites
